@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "tidygrad"
+  site-url: "https://xl0.github.io/tidygrad"
+  description: "A tidy library for gradient-based optimization"
+  repo-branch: master
+  repo-url: "https://github.com/xl0/tidygrad"
