@@ -1,4 +1,4 @@
-Tidy Grad \| [Documentation](https://xl0.github.io/tidygrad/) \|
+TidyGrad \| [Documentation](https://xl0.github.io/tidygrad/) \|
 [Discord](https://discord.gg/qBaqauUWXP)
 ================
 
