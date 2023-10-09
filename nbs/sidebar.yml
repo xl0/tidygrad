@@ -1,0 +1,6 @@
+website:
+  sidebar:
+    contents:
+      - index.ipynb
+      - 00_utils.ipynb
+      - 01_tensor.ipynb
