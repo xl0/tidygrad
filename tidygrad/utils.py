@@ -8,19 +8,29 @@ from .tensor import Tensor
 import numpy as np
 
 # %% ../nbs/00_utils.ipynb 4
-def grad_check(parameters: tuple, nn, eps=10e-4):
-    for p in reversed(parameters):
-        slow_grad = np.zeros_like(p.grad)
-        for idx, _ in np.ndenumerate(p.data):
-            loss = nn(*parameters)
+def grad_check(nn, x, y, params: tuple, eps=1e-7):
+    for p in reversed(params):
+        # Reshape to 1D so it's easier to sample random indices
 
-            old_val = p.data[idx]
-            p.data[idx] = old_val + eps
+        data_view = p.data.reshape(-1)
+        grad_view = p.grad.reshape(-1)
 
-            loss_plus_h = nn(*parameters)
-            slow_grad[idx] = (loss_plus_h.data - loss.data) / eps
+        slow_grad_view = np.zeros_like(p.grad).reshape(-1)
 
-        if not np.allclose(slow_grad, p.grad, atol=1e-2):
+        indices = np.random.choice(np.arange(len(grad_view)), size=1000)
+        for idx in indices:
+            loss = nn(x, y, params)
+
+            old_val = data_view[idx]
+            data_view[idx] = old_val + eps
+
+            loss_plus_h = nn(x, y, params)
+
+            slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
+            data_view[idx] = old_val
+        max_grad_diff = np.max(np.abs(slow_grad_view[indices] - grad_view[indices]))
+
+        if max_grad_diff > 1e-4:
             raise ValueError(
-                f"Gradient check failed for {p.name}:\nSlow grad:\n{slow_grad}\nGrad:\n{p.grad}"
+                f"Gradient check failed for {p.name}: Max error: {max_grad_diff}"
             )
