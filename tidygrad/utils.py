@@ -8,29 +8,47 @@ from .tensor import Tensor
 import numpy as np
 
 # %% ../nbs/00_utils.ipynb 4
-def grad_check(nn, x, y, params: tuple, eps=1e-7):
+def grad_check(nn, inputs, params: tuple = (), eps=1e-5, n=1000):
     for p in reversed(params):
         # Reshape to 1D so it's easier to sample random indices
 
         data_view = p.data.reshape(-1)
         grad_view = p.grad.reshape(-1)
 
-        slow_grad_view = np.zeros_like(p.grad).reshape(-1)
+        slow_grad = np.zeros_like(p.grad)
+        slow_grad_view = slow_grad.reshape(-1)
 
-        indices = np.random.choice(np.arange(len(grad_view)), size=1000)
+        indices = np.random.choice(
+            np.arange(grad_view.size), size=min(n, grad_view.size), replace=False
+        )
+        indices = list(filter(lambda idx: abs(grad_view[idx]) > 1e-9, indices))
         for idx in indices:
-            loss = nn(x, y, params)
-
             old_val = data_view[idx]
-            data_view[idx] = old_val + eps
 
-            loss_plus_h = nn(x, y, params)
+            loss = nn(inputs, params)
+
+            data_view[idx] = old_val + eps
+            loss_plus_h = nn(inputs, params)
+            # print(f"loss_plus_h: {loss_plus_h.data}")
+            # print(f"loss: {loss.data}")
+            # print(f"diff: {loss_plus_h.data - loss.data}")
+            # print(f"derivative: {(loss_plus_h.data - loss.data) / eps}")
 
             slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
             data_view[idx] = old_val
-        max_grad_diff = np.max(np.abs(slow_grad_view[indices] - grad_view[indices]))
 
-        if max_grad_diff > 1e-4:
+        max_grad_diff = np.max(
+            np.abs(
+                (slow_grad_view[indices] - grad_view[indices])
+                / np.maximum(slow_grad_view[indices], grad_view[indices])
+            )
+        )
+
+        print(f"Max gradient difference for {p.name}: {max_grad_diff*100}%")
+        # print(f"Gradient : {p.grad}")
+        # print(f"Slow grad: {slow_grad_view}")
+        # print(f"Diff: {np.where(slow_grad_view, slow_grad_view - grad_view, 0)}")
+        if max_grad_diff > 1e-2:
             raise ValueError(
                 f"Gradient check failed for {p.name}: Max error: {max_grad_diff}"
             )

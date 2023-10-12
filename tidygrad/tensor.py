@@ -58,11 +58,16 @@ class Tensor:
     op = "L"
     name: str = ""
     parents: list = []
+    eps = 1e-10
 
-    def __init__(self, data, name=""):
+    def __init__(self, data, name="", eps=1e-8):
+        if not isinstance(data, np.ndarray):
+            data = np.array(data)
+
         self.data = data
         self.name = name
         self.grad = np.zeros_like(self.data)
+        self.eps = eps
 
     def broadcast(self, target_shape):
         self_shape = self.data.shape
@@ -125,6 +130,11 @@ class Tensor:
         return out
 
     def log(self, name="Noname"):
+        # data = self.data
+        # print(f"min/max of data is {data.min()}/{data.max()}")
+        # print(f"min/max of res is {np.log(data).min()}/{np.log(data).max()}")
+        # print(f"Log of:\n{data}\nis:{np.log(data)}")
+
         out = LogTensor(data=np.log(self.data), name=name)
         out.parents = [self]
         return out
@@ -158,6 +168,8 @@ class Tensor:
         # Start with the current node
         visited = []
         nodes = []
+
+        assert self.data.size == 1, "Cannot call backward on non-scalar tensor"
 
         def walk(node):
             for p in node.parents:
@@ -252,7 +264,7 @@ class LogTensor(Tensor):
     op = "log"
 
     def _backward(self):
-        self.parents[0].grad += self.grad * (1 / self.data)
+        self.parents[0].grad += self.grad * (1.0 / (self.parents[0].data))
 
 
 class BroadcastTensor(Tensor):
