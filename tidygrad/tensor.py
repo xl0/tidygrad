@@ -5,7 +5,6 @@ __all__ = ['Tensor', 'BaseOp', 'BinaryElementwiseOp', 'UnaryElementwiseOp']
 
 # %% ../nbs/01_tensor.ipynb 3
 import numpy as np
-from types import NoneType
 
 
 class Tensor:
@@ -73,7 +72,7 @@ class BaseOp:
 
     def __init__(self, *args, name: str = None):
         assert isinstance(
-            name, (str, NoneType)
+            name, (str, type(None))
         ), f"name= should be str, got {type(name)}. You probably meant something else."
 
         self.args = [
@@ -191,32 +190,6 @@ class Log(UnaryElementwiseOp):
 
     def backward(self):
         self.parents[0].grad += self.out.grad / self.parents[0].data
-
-
-class Sigmoid(UnaryElementwiseOp):
-    """Take the sigmoid of a tensor"""
-
-    name_template = "sigmoid({})"
-
-    def __init__(self, a, name=None):
-        super().__init__(a, name=name)
-        self.out = Tensor(1 / (1 + np.exp(-self.args[0].data)), name=self.name, op=self)
-
-    def backward(self):
-        self.parents[0].grad += self.out.grad * self.out.data * (1 - self.out.data)
-
-
-class Relu(UnaryElementwiseOp):
-    """Take the sigmoid of a tensor"""
-
-    name_template = "relu({})"
-
-    def __init__(self, a, name=None):
-        super().__init__(a, name=name)
-        self.out = Tensor(np.maximum(0, self.args[0].data), name=self.name, op=self)
-
-    def backward(self):
-        self.parents[0].grad += self.out.grad * (self.out.data > 0)
 
 
 class Matmul(BaseOp):
@@ -353,12 +326,6 @@ class Tensor:
 
     def log(self, name=None):
         return Log(self, name=name).out
-
-    def sigmoid(self, name=None):
-        return Sigmoid(self, name=name).out
-
-    def relu(self, name=None):
-        return Relu(self, name=name).out
 
     def mmul(self, other, name=None):
         return Matmul(self, other, name=name).out
