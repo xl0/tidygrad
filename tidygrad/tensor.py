@@ -279,6 +279,59 @@ class Broadcast(BaseOp):
 
         self.parents[0].grad += summed
 
+
+# class LessThan(BinaryElementwiseOp):
+#     name_template = "({}<{})"
+
+#     def __init__(self, a, b, name=None):
+#         super().__init__(a, b, name=name)
+#         self.out = Tensor(
+#             data=self.args[0].data < self.args[1].data, name=self.name, op=self
+#         )
+
+#     # def backward(self):
+#     #     self.parents[0].grad += self.out.grad * (self.parents[0].data < self.parents[1].data)
+#     #     self.parents[1].grad += self.out.grad * (self.parents[0].data >= self.parents[1].data)
+
+
+# class Where(BaseOp):
+#     name_template = "where({})"
+
+#     def __init__(self, a, b, c, name=None):
+#         super().__init__(a, b, c, name=name)
+#         self.parents = self.args
+#         self.out = Tensor(
+#             data=np.where(self.args[0].data, self.args[1].data, self.args[2].data),
+#             name=self.name,
+#             op=self,
+#         )
+
+#     def backward(self):
+#         # self.parents[0].grad += self.out.grad * self.parents[1].data
+#         # self.parents[0].grad += self.out.grad * self.parents[2].data
+
+#         self.parents[1].grad += self.out.grad * self.parents[0].data
+#         self.parents[2].grad += self.out.grad * (1 - self.parents[0].data)
+
+
+class ExpLog(UnaryElementwiseOp):
+    """Exponentiate a tensor"""
+
+    name_template = "exp({})"
+
+    def __init__(self, a, name=None):
+        super().__init__(a, name=name)
+
+        def logexp(x):
+            return np.where(x < 0, np.log(1 + np.exp(x)), x + np.log(1 + np.exp(-x)))
+
+        self.out = Tensor(logexp(self.args[0].data), name=self.name, op=self)
+
+    def backward(self):
+        self.parents[0].grad += self.out.grad * (
+            1 - 1 / (1 + np.exp(self.parents[0].data))
+        )
+
 # %% ../nbs/01_tensor.ipynb 8
 class Tensor:
     # op = "L"
@@ -286,7 +339,7 @@ class Tensor:
 
     def __init__(self, data, name=None, op=None, eps=1e-8):
         self.data = np.asarray(data)
-        self.grad = np.zeros_like(self.data)
+        self.grad = np.zeros_like(self.data, dtype=np.float32)
         self.eps = eps
         self.op = op or Load(name=name)
         self.name = name or self.op.name
@@ -333,6 +386,12 @@ class Tensor:
     def sum(self, name=None, axis=None):
         return Sum(self, name=name, axis=axis).out
 
+    # def lt(self, other, name=None):
+    #     return LessThan(self, other, name=name).out
+
+    # def where(self, other1, other2, name=None):
+    #     return Where(self, other1, other2, name=name).out
+
     def __add__(self, other):
         return self.add(other)
 
@@ -344,6 +403,9 @@ class Tensor:
 
     def __neg__(self):
         return self.neg()
+
+    # def __lt__(self, other):
+    #     return self.lt(other)
 
     def backward(self):
         # Create a list of all parent nodes, in reverse order
@@ -368,22 +430,3 @@ class Tensor:
         for n in nodes[::-1]:
             if hasattr(n.op, "backward"):
                 n.op.backward()
-
-
-# class WhereTensor(Tensor):
-#     op = "where"
-
-#     def _backward(self):
-#         self.parents[0].grad += self.grad * (
-#             self.data.astype(bool) * self.parents[1].data
-#         )
-#         self.parents[0].grad += self.grad * (
-#             ~self.data.astype(bool) * self.parents[2].data
-#         )
-
-
-# class LtTensor(Tensor):
-#     op = "<"
-
-#     def _backward(self):
-#         self.parents[0].grad += self.grad * (self.data < self.parents[1].data)
