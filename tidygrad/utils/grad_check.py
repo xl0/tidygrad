@@ -5,7 +5,7 @@ __all__ = ['grad_check']
 
 # %% ../../nbs/10_utils.grad_check.ipynb 3
 from ..tensor import Tensor
-from ..functional import sigmoid
+from ..functional import relu
 import numpy as np
 
 # %% ../../nbs/10_utils.grad_check.ipynb 4
