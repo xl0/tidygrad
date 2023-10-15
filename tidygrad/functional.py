@@ -18,7 +18,8 @@ class Sigmoid(UnaryElementwiseOp):
         self.out = Tensor(1 / (1 + np.exp(-self.args[0].data)), name=self.name, op=self)
 
     def backward(self):
-        self.parents[0].grad += self.out.grad * self.out.data * (1 - self.out.data)
+        with np.errstate(under="ignore"):  # Triggered by infinitesimally small 1-data
+            self.parents[0].grad += self.out.grad * self.out.data * (1 - self.out.data)
 
 # %% ../nbs/02_functional.ipynb 5
 def sigmoid(input, name=None):

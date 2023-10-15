@@ -76,7 +76,9 @@ class BaseOp:
         ), f"name= should be str, got {type(name)}. You probably meant something else."
 
         self.args = [
-            arg if isinstance(arg, Tensor) else Tensor(data=np.asarray(arg))
+            arg
+            if isinstance(arg, Tensor)
+            else Tensor(data=np.asarray(arg, dtype=np.float32))
             for arg in args
         ]
         self.name = (
@@ -430,3 +432,6 @@ class Tensor:
         for n in nodes[::-1]:
             if hasattr(n.op, "backward"):
                 n.op.backward()
+
+    def zero_grad(self):
+        self.grad.fill(0)
