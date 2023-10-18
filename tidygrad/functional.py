@@ -47,7 +47,7 @@ from .tensor import ExpLog
 
 # %% ../nbs/02_functional.ipynb 9
 def BCE_loss(logits, target):
-    return -logits + logits * target - ExpLog(-logits).out
+    return (logits - logits * target + ExpLog(-logits).out).sum()
 
 # %% ../nbs/02_functional.ipynb 10
 class Dropout(UnaryElementwiseOp):

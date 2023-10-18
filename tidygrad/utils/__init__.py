@@ -1,0 +1,1 @@
+noop = lambda x: x

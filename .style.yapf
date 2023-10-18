@@ -1,0 +1,19 @@
+[style]
+
+indent_width = 4
+blank_lines_between_top_level_imports_and_variables=2
+column_limit=160
+arithmetic_precedence_indication=True
+blank_line_before_class_docstring=False
+blank_line_before_module_docstring=False
+blank_line_before_nested_class_or_def=False
+coalesce_brackets=True
+dedent_closing_brackets=True
+join_multiple_lines=True
+no_spaces_around_selected_binary_operators=True
+spaces_before_comment=2
+split_before_arithmetic_operator=True
+split_before_bitwise_operator=True
+split_before_closing_bracket=False
+split_before_dot=True
+split_complex_comprehension=True

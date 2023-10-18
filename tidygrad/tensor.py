@@ -406,6 +406,10 @@ class Tensor:
     def __neg__(self):
         return self.neg()
 
+    @property
+    def shape(self):
+        return self.data.shape
+
     # def __lt__(self, other):
     #     return self.lt(other)
 
