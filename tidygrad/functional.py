@@ -48,8 +48,13 @@ def relu(input, name=None):
     return Relu(input, name=name).out
 
 # %% ../nbs/02_functional.ipynb 8
-def BCE_loss(logits, target):
-    return (logits - logits * target + ExpLog(-logits).out).sum()
+def BCE_loss(logits, target, reduction="mean"):
+    loss = logits - logits * target + ExpLog(-logits).out
+    if reduction == "mean":
+        return loss.mean()
+    if reduction == "sum":
+        return loss.sum()
+    assert 0, "Invalid reduction"
 
 # %% ../nbs/02_functional.ipynb 9
 class Dropout(UnaryElementwiseOp):

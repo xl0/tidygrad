@@ -383,20 +383,14 @@ class Tensor:
         self.name = name or self.op.name
 
     def __repr__(self):
-        # if repr(self.data):
-        #     value_str = f"\n    v={np.array2string(self.data, prefix='     ')})"
-        #     grad_str = f"\n    ∇={np.array2string(self.grad, prefix='     ')}"
-        # else:
         value_str = f"v={lovely(self.data)}"
         grad_str = f"∇={lovely(self.grad)}"
-
         parents = (
             f" parents=[" + ",".join([p.name for p in self.op.parents]) + "]"
             if self.op.parents
             else ""
         )
-
-        return f'Tensor{list(self.data.shape)}(name="{self.name}" op={type(self.op).__name__}{parents}):\n\t{value_str}\n\t{grad_str}'
+        return f'Tensor{list(self.data.shape)}(name="{self.name}" op={type(self.op).__name__}{parents}):\n    {value_str}\n    {grad_str}'
 
     def broadcast(self, target_shape, name=None):
         return Broadcast(self, target_shape, name=name).out
@@ -428,6 +422,12 @@ class Tensor:
     def sum(self, name=None, axis=None, keepdims=False):
         return Sum(self, name=name, axis=axis, keepdims=keepdims).out
 
+    def mean(self, name=None, axis=None, keepdims=False):
+        reduced = np.prod(self.data.shape)
+        if axis:
+            reduced = np.prod([self.data.shape[i] for i in axis])
+        return Sum(self, name=name, axis=axis, keepdims=keepdims).out / reduced
+
     # def lt(self, other, name=None):
     #     return LessThan(self, other, name=name).out
 
@@ -443,7 +443,6 @@ class Tensor:
     def __sub__(self, other):
         return self.sub(other)
 
-    # 1 - y === y - 1
     def __rsub__(self, other):
         return -(self.sub(other))
 
