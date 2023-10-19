@@ -33,12 +33,16 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000):
             loss_plus_h = func(inputs, params)
 
             slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
+
+            # print(f"{idx}: loss_plus_h: {loss_plus_h.data}, loss: {loss.data}, diff: {loss_plus_h.data - loss.data}, grad: {grad_view[idx]}, slow_grad: {slow_grad_view[idx]}")
             data_view[idx] = old_val
 
         max_grad_diff = np.max(
             np.abs(
                 (slow_grad_view[indices] - grad_view[indices])
-                / np.maximum(slow_grad_view[indices], grad_view[indices])
+                / np.maximum(
+                    np.abs(slow_grad_view[indices]), np.abs(grad_view[indices])
+                )
             )
         )
 

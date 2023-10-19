@@ -3,11 +3,11 @@
 # %% auto 0
 __all__ = ['Optimizer', 'SGD', 'Adam']
 
-# %% ../nbs/03_optim.ipynb 3
+# %% ../nbs/03_optim.ipynb 2
 import numpy as np
 from tidygrad.tensor import Tensor
 
-# %% ../nbs/03_optim.ipynb 4
+# %% ../nbs/03_optim.ipynb 3
 class Optimizer:
     def __init__(self, params):
         self.params = params
@@ -19,7 +19,7 @@ class Optimizer:
         for p in self.params:
             p.grad.fill(0)
 
-# %% ../nbs/03_optim.ipynb 5
+# %% ../nbs/03_optim.ipynb 4
 class SGD(Optimizer):
     def __init__(self, params, lr=0.1, mom=0):
         super().__init__(params)
@@ -35,7 +35,7 @@ class SGD(Optimizer):
             else:
                 print("NaN gradient encountered, skipping step.")
 
-# %% ../nbs/03_optim.ipynb 6
+# %% ../nbs/03_optim.ipynb 5
 class Adam(Optimizer):
     def __init__(self, params, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8):
         super().__init__(params)

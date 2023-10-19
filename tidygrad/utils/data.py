@@ -20,8 +20,6 @@ def download_file(url, path):
 
 # %% ../../nbs/10_utils.data.ipynb 3
 ### Fastai style
-
-
 class Dataset:
     def __getitem__(self, idx):
         raise NotImplementedError

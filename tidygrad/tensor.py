@@ -3,14 +3,15 @@
 # %% auto 0
 __all__ = ['Tensor', 'BaseOp', 'BinaryElementwiseOp', 'UnaryElementwiseOp']
 
-# %% ../nbs/01_tensor.ipynb 3
+# %% ../nbs/01_tensor.ipynb 2
 import numpy as np
+from lovely_numpy import lovely
 
 
 class Tensor:
     ...
 
-# %% ../nbs/01_tensor.ipynb 4
+# %% ../nbs/01_tensor.ipynb 3
 def calculate_target_shape(s1, s2):
     """Calculate the target shape for broadcasting two tensors"""
 
@@ -26,7 +27,7 @@ def calculate_target_shape(s1, s2):
 
     return out_shape
 
-# %% ../nbs/01_tensor.ipynb 5
+# %% ../nbs/01_tensor.ipynb 4
 def maybe_broadcast_elementwise(a: Tensor, b: Tensor):
     """Broadcast two tensors if they have different shapes"""
     if a.data.shape != b.data.shape:
@@ -64,7 +65,7 @@ def maybe_broadcast_matmul(a: Tensor, b: Tensor):
 
     return a, b
 
-# %% ../nbs/01_tensor.ipynb 6
+# %% ../nbs/01_tensor.ipynb 5
 class BaseOp:
     """Base class for all operations"""
 
@@ -97,7 +98,7 @@ class BinaryElementwiseOp(BaseOp):
     """Base class for binary elementwise operations"""
 
     def __init__(self, a, b, name=None):
-        super().__init__(a, b)
+        super().__init__(a, b, name=name)
         self.parents = self.args = maybe_broadcast_elementwise(*self.args)
 
 
@@ -105,10 +106,10 @@ class UnaryElementwiseOp(BaseOp):
     """Base class for unary elementwise operations"""
 
     def __init__(self, a, name=None):
-        super().__init__(a)
+        super().__init__(a, name=name)
         self.parents = self.args
 
-# %% ../nbs/01_tensor.ipynb 7
+# %% ../nbs/01_tensor.ipynb 6
 class Load(BaseOp):
     """Load a tensor"""
 
@@ -167,10 +168,28 @@ class Mul(BinaryElementwiseOp):
         self.parents[1].grad += self.out.grad * self.parents[0].data
 
 
+class Div(BinaryElementwiseOp):
+    """Divide two tensors"""
+
+    name_template = "({}/{})"
+
+    def __init__(self, a, b, name=None):
+        super().__init__(a, b, name=name)
+        self.out = Tensor(
+            data=self.args[0].data / self.args[1].data, name=self.name, op=self
+        )
+
+    def backward(self):
+        self.parents[0].grad += self.out.grad / self.parents[1].data
+        self.parents[1].grad -= (
+            self.out.grad * self.parents[0].data / (self.parents[1].data ** 2)
+        )
+
+
 class Neg(UnaryElementwiseOp):
     """Negate a tensor"""
 
-    name_template = "(-{}0"
+    name_template = "(-{})"
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
@@ -192,6 +211,20 @@ class Log(UnaryElementwiseOp):
 
     def backward(self):
         self.parents[0].grad += self.out.grad / self.parents[0].data
+
+
+class Exp(UnaryElementwiseOp):
+    """Exponentiate a tensor"""
+
+    name_template = "exp({})"
+
+    def __init__(self, a, name=None):
+        super().__init__(a, name=name)
+
+        self.out = Tensor(np.exp(self.args[0].data), name=self.name, op=self)
+
+    def backward(self):
+        self.parents[0].grad += self.out.grad * self.out.data
 
 
 class Matmul(BaseOp):
@@ -222,11 +255,15 @@ class Sum(BaseOp):
 
     name_template = "sum({})"
 
-    def __init__(self, a, name=None, axis=None):
+    def __init__(self, a, name=None, axis=None, keepdims=False):
         super().__init__(a, name=name)
         # self.axis = axis
         self.parents = self.args
-        self.out = Tensor(np.sum(self.args[0].data, axis=axis), name=self.name, op=self)
+        self.out = Tensor(
+            np.sum(self.args[0].data, axis=axis, keepdims=keepdims),
+            name=self.name,
+            op=self,
+        )
 
     def backward(self):
         self.parents[0].grad += self.out.grad
@@ -295,7 +332,6 @@ class Broadcast(BaseOp):
 #     #     self.parents[0].grad += self.out.grad * (self.parents[0].data < self.parents[1].data)
 #     #     self.parents[1].grad += self.out.grad * (self.parents[0].data >= self.parents[1].data)
 
-
 # class Where(BaseOp):
 #     name_template = "where({})"
 
@@ -334,7 +370,7 @@ class ExpLog(UnaryElementwiseOp):
             1 - 1 / (1 + np.exp(self.parents[0].data))
         )
 
-# %% ../nbs/01_tensor.ipynb 8
+# %% ../nbs/01_tensor.ipynb 7
 class Tensor:
     # op = "L"
     name: str = ""
@@ -347,22 +383,20 @@ class Tensor:
         self.name = name or self.op.name
 
     def __repr__(self):
-        if repr(self.data):
-            value_str = f"\n    v={np.array2string(self.data, prefix='     ')})"
-            grad_str = f"\n    ∇={np.array2string(self.grad, prefix='     ')}"
-        else:
-            value_str = f" v={str(self.data)}"
-            grad_str = f" ∇={str(self.grad)}"
+        # if repr(self.data):
+        #     value_str = f"\n    v={np.array2string(self.data, prefix='     ')})"
+        #     grad_str = f"\n    ∇={np.array2string(self.grad, prefix='     ')}"
+        # else:
+        value_str = f"v={lovely(self.data)}"
+        grad_str = f"∇={lovely(self.grad)}"
 
         parents = (
-            f" {self.name}.parents=["
-            + ",".join([p.name for p in self.op.parents])
-            + "]"
+            f" parents=[" + ",".join([p.name for p in self.op.parents]) + "]"
             if self.op.parents
             else ""
         )
 
-        return f'Tensor{list(self.data.shape)}(name="{self.name}" op={type(self.op).__name__}{parents}{value_str}{grad_str})'
+        return f'Tensor{list(self.data.shape)}(name="{self.name}" op={type(self.op).__name__}{parents}):\n\t{value_str}\n\t{grad_str}'
 
     def broadcast(self, target_shape, name=None):
         return Broadcast(self, target_shape, name=name).out
@@ -376,17 +410,23 @@ class Tensor:
     def mul(self, other, name=None):
         return Mul(self, other, name=name).out
 
+    def div(self, other, name=None):
+        return Div(self, other, name=name).out
+
     def neg(self, name=None):
         return Neg(self, name=name).out
 
     def log(self, name=None):
         return Log(self, name=name).out
 
+    def exp(self, name=None):
+        return Exp(self, name=name).out
+
     def mmul(self, other, name=None):
         return Matmul(self, other, name=name).out
 
-    def sum(self, name=None, axis=None):
-        return Sum(self, name=name, axis=axis).out
+    def sum(self, name=None, axis=None, keepdims=False):
+        return Sum(self, name=name, axis=axis, keepdims=keepdims).out
 
     # def lt(self, other, name=None):
     #     return LessThan(self, other, name=name).out
@@ -397,11 +437,24 @@ class Tensor:
     def __add__(self, other):
         return self.add(other)
 
+    def __radd__(self, other):
+        return self.add(other)
+
     def __sub__(self, other):
         return self.sub(other)
 
+    # 1 - y === y - 1
+    def __rsub__(self, other):
+        return -(self.sub(other))
+
     def __mul__(self, other):
         return self.mul(other)
+
+    def __rmul__(self, other):
+        return self.mul(other)
+
+    def __truediv__(self, other):
+        return self.div(other)
 
     def __neg__(self):
         return self.neg()
