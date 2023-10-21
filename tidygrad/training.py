@@ -7,6 +7,7 @@ __all__ = ['add_callbacks', 'DictLoggerCallback', 'Learner', 'ProgressBarCallbac
 from .tensor import Tensor
 from .utils import noop
 import numpy as np
+import fastprogress
 
 # %% ../nbs/06_training.ipynb 3
 def add_callbacks(func):
