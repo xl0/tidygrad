@@ -26,7 +26,7 @@ def add_callbacks(func):
 
     return decorator
 
-# %% ../nbs/06_training.ipynb 4
+# %% ../nbs/06_training.ipynb 5
 class DictLoggerCallback:
     val_loss = 0
     val_error = 0
@@ -77,7 +77,7 @@ class DictLoggerCallback:
         self.val_loss = 0
         self.val_error = 0
 
-# %% ../nbs/06_training.ipynb 5
+# %% ../nbs/06_training.ipynb 6
 class Learner:
     # dataloaders - train, test
     # model - function that outputs a tensor that can be fed into a loss function
@@ -146,10 +146,10 @@ class Learner:
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-# %% ../nbs/06_training.ipynb 6
+# %% ../nbs/06_training.ipynb 7
 from tqdm.auto import tqdm
 
-# %% ../nbs/06_training.ipynb 7
+# %% ../nbs/06_training.ipynb 8
 class ProgressBarCallback:
     def __init__(self):
         pass
@@ -166,7 +166,7 @@ class ProgressBarCallback:
                 f"loss={learner.metrics[-1]['loss']:.4f}, error={learner.metrics[-1]['error']:.4f}"
             )
 
-# %% ../nbs/06_training.ipynb 8
+# %% ../nbs/06_training.ipynb 9
 def one_hot_encode_batch(y_batch, n_classes):
     batch_size = len(y_batch)
     assert batch_size > 0

@@ -20,7 +20,7 @@ from pathlib import Path
 
 def load_mnist(path, url):
     file_path = Path(path) / "mnist.npz"
-    download_file(file_path, url)
+    download_file(file_path, url + "mnist.npz")
     with np.load(file_path) as f:
         x_train, y_train = f["x_train"], f["y_train"]
         x_test, y_test = f["x_test"], f["y_test"]
@@ -41,7 +41,7 @@ def load_fashion_mnist(path, url_base):
         "t10k-labels-idx1-ubyte.gz",
     ]
     for f in filenames:
-        download_file(url_base + f, path / f)
+        download_file(path / f, url_base + f)
 
     with gzip.open(path / filenames[0], "rb") as f:
         x_train = np.frombuffer(f.read(), np.uint8, offset=16).reshape(-1, 28, 28)

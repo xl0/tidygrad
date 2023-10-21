@@ -9,14 +9,17 @@ import os
 import requests
 
 # %% ../../nbs/10_utils.data.ipynb 2
-def download_file(url, path):
+def download_file(path, url):
     dir_path = os.path.dirname(path)
 
     os.makedirs(dir_path, exist_ok=True)
     if not os.path.exists(path):
+        print(f"Downloading {url} to {path}")
         response = requests.get(url)
         with open(path, "wb") as f:
             f.write(response.content)
+    else:
+        print(f"File {path} already exists")
 
 # %% ../../nbs/10_utils.data.ipynb 3
 ### Fastai style
