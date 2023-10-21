@@ -458,6 +458,10 @@ class Tensor:
     def __neg__(self):
         return self.neg()
 
+    def equal(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return self.data == other.data
+
     @property
     def shape(self):
         return self.data.shape

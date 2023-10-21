@@ -31,51 +31,49 @@ class DictLoggerCallback:
     val_loss = 0
     val_error = 0
 
-    def __init__(self, metrics=None):
-        self.metrics = [] if metrics is None else metrics
+    def __init__(self, metrics=None, history=None):
+        self.metrics = [MultiClassAccuracy(), Loss()] if metrics is None else metrics
+        self.history = [] if history is None else history
 
     def log(self, learner, metric, value, accum=False, step: int = None):
         if not hasattr(learner, "metrics"):
-            learner.metrics = self.metrics
+            learner.metrics = self.history
         if step is None:
-            step = self.metrics[-1]["step"] + 1 if self.metrics else 0
+            step = self.history[-1]["step"] + 1 if self.history else 0
 
-        if not self.metrics or step != self.metrics[-1]["step"]:
-            self.metrics.append({"step": step})
+        if not self.history or step != self.history[-1]["step"]:
+            self.history.append({"step": step})
 
-        if metric in self.metrics[-1] and accum:
-            self.metrics[-1][metric] += value
+        if metric in self.history[-1] and accum:
+            self.history[-1][metric] += value
         else:
-            self.metrics[-1][metric] = value
+            self.history[-1][metric] = value
 
     def post_calc_loss(self, learner):
-        if learner.training:
-            self.log(learner, "loss", float(learner.loss.data), step=learner.step)
-            self.log(
-                learner,
-                "error",
-                1
-                - float((learner.preds.data.argmax(1) == learner.batch[1].data).mean()),
-                step=learner.step,
-            )
-        else:
-            self.val_loss += float(learner.loss.data)
-            self.val_error += 1 - float(
-                (learner.preds.data.argmax(1) == learner.batch[1].data).mean()
-            )
-            # self.log("val_loss", float(learner.loss.data), accum=True, step=learner.step)
+        for m in self.metrics:
+            if learner.training:
+                if m.train:
+                    self.log(
+                        learner,
+                        f"train_{m.name}",
+                        m.calc(learner),
+                        accum=False,
+                        step=learner.step,
+                    )
+            else:
+                if m.valid:
+                    self.log(
+                        learner,
+                        f"val_{m.name}",
+                        m.calc(learner),
+                        accum=True,
+                        step=learner.step,
+                    )
 
     def post_epoch(self, learner):
-        # val_loss = self.metrics[-1]["val_loss"] / len(learner.dl)
-        self.log(
-            learner, "val_loss", self.val_loss / len(learner.dl), step=learner.step
-        )
-        self.log(
-            learner, "val_error", self.val_error / len(learner.dl), step=learner.step
-        )
-        # self.log("epoch", learner.epoch, step=learner.step)
-        self.val_loss = 0
-        self.val_error = 0
+        for m in self.metrics:
+            if f"val_{m.name}" in self.history[-1]:
+                self.history[-1][f"val_{m.name}"] /= len(learner.dl)
 
 # %% ../nbs/06_training.ipynb 6
 class Learner:
@@ -167,17 +165,17 @@ class ProgressBarCallback:
             )
 
 # %% ../nbs/06_training.ipynb 9
-def one_hot_encode_batch(y_batch, n_classes):
-    batch_size = len(y_batch)
+def one_hot_encode_batch(y, n_classes):
+    batch_size = len(y)
     assert batch_size > 0
     assert n_classes > 0
-    assert y_batch.shape == (batch_size,)
-    assert np.min(y_batch) >= 0
+    assert y.shape == (batch_size,)
+    assert np.min(y) >= 0
 
     # Initialize a zero matrix of shape (batch_size, num_classes)
     one_hot_matrix = np.zeros((batch_size, n_classes))
 
     # Fill in the appropriate elements
-    one_hot_matrix[np.arange(batch_size), y_batch] = 1
+    one_hot_matrix[np.arange(batch_size), y] = 1
 
-    return one_hot_matrix
+    return Tensor(one_hot_matrix)
