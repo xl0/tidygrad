@@ -23,7 +23,7 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000):
             np.arange(grad_view.size), size=min(n, grad_view.size), replace=False
         )
 
-        indices = list(filter(lambda idx: abs(grad_view[idx]) > 1e-9, indices))  # XXX?
+        indices = list(filter(lambda idx: abs(grad_view[idx]) > eps, indices))  # XXX?
         for idx in indices:
             old_val = data_view[idx]
 
