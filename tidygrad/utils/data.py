@@ -18,8 +18,8 @@ def download_file(path, url):
         response = requests.get(url)
         with open(path, "wb") as f:
             f.write(response.content)
-    else:
-        print(f"File {path} already exists")
+    # else:
+    #     print(f"File {path} already exists")
 
 # %% ../../nbs/10_utils.data.ipynb 3
 ### Fastai style
