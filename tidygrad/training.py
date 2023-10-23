@@ -9,7 +9,7 @@ from .tensor import Tensor
 from .utils import noop
 import numpy as np
 
-# %% ../nbs/06_training.ipynb 3
+# %% ../nbs/06_training.ipynb 4
 def add_callbacks(func):
     # print("Adding callbacks", func.__name__)
 
@@ -17,16 +17,22 @@ def add_callbacks(func):
         full_name = func.__name__.replace("do_", "")
         pre_name = f"pre_{full_name}"
         post_name = f"post_{full_name}"
+
+        start_time = time.time()
         for callback in self.callbacks:
             getattr(callback, pre_name, noop)(self)
 
         func(self)
         for callback in self.callbacks:
             getattr(callback, post_name, noop)(self)
+        end_time = time.time()
+
+        # if end_time - start_time > 0.5:
+        #     print(f"{full_name} took {end_time - start_time:.2f} seconds")
 
     return decorator
 
-# %% ../nbs/06_training.ipynb 5
+# %% ../nbs/06_training.ipynb 6
 class DictLoggerCallback:
     val_loss = 0
     val_error = 0
@@ -70,12 +76,12 @@ class DictLoggerCallback:
                         step=learner.step,
                     )
 
-    def post_epoch(self, learner):
+    def post_all_batches(self, learner):
         for m in self.metrics:
             if f"val_{m.name}" in self.history[-1]:
                 self.history[-1][f"val_{m.name}"] /= len(learner.dl)
 
-# %% ../nbs/06_training.ipynb 6
+# %% ../nbs/06_training.ipynb 7
 class Learner:
     # dataloaders - train, test
     # model - function that outputs a tensor that can be fed into a loss function
@@ -145,10 +151,10 @@ class Learner:
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-# %% ../nbs/06_training.ipynb 7
+# %% ../nbs/06_training.ipynb 8
 from tqdm.auto import tqdm
 
-# %% ../nbs/06_training.ipynb 8
+# %% ../nbs/06_training.ipynb 9
 def one_hot_encode_batch(y, n_classes):
     batch_size = len(y)
     assert batch_size > 0
@@ -203,45 +209,139 @@ def metrics_last_pretty(metrics, metrics_dict):
     return " ".join(out)
 
 # %% ../nbs/06_training.ipynb 11
-def print_metrics_header(metrics, mbar):
-    mbar.write(
+def print_metrics_header(metrics):
+    return (
         "Ep  | "
         + metrics_names_pretty(metrics)
         + " | "
         + metrics_names_pretty([f"val_{m}" for m in metrics])
+        + "\n"
     )
 
 
-def print_metrics(learner, metrics, mbar):
+def print_metrics(learner, metrics):
     train_metrics = {k: v for k, v in learner.history[-1].items() if k in metrics}
     val_metrics = {
         f"val_{m}": learner.history[-1].get(f"val_{m}", None) for m in metrics
     }
-    mbar.write(
-        f"{learner.epoch:<3} | "
-        + metrics_last_pretty(metrics, train_metrics)
-        + " | "
-        + metrics_last_pretty([f"val_{m}" for m in metrics], val_metrics)
+    return (
+        " | ".join(
+            [
+                f"{learner.epoch:<3}",
+                metrics_last_pretty(metrics, train_metrics),
+                metrics_last_pretty([f"val_{m}" for m in metrics], val_metrics),
+            ]
+        )
+        + "\n"
     )
 
 # %% ../nbs/06_training.ipynb 12
-class ProgressBarCallback:
-    def __init__(self, metrics=["loss"], plot=True):
-        self.metrics = metrics
+from IPython.display import HTML, display
+from matplotlib import pyplot as plt
 
-    def pre_fit(self, learner):
+# %% ../nbs/06_training.ipynb 13
+def denoise(L, window_size=10):
+    i = [i for i, _ in L]
+    x = np.array([x for _, x in L])
+
+    pad_size = window_size // 2
+    data_padded = np.pad(x, pad_width=pad_size, mode="edge")
+    xx = np.convolve(data_padded, np.ones(window_size) / window_size, mode="valid")
+
+    return [(p, q) for p, q in zip(i, xx)]
+
+
+def plot_metrics(learner, metrics, plot_skip=5, x_lim=None, plot_smooth_training=0):
+    if x_lim is None:
+        x_lim = len(learner.dataloaders.train) * learner.n_epochs
+    fig, ax = plt.subplots(
+        1, len(metrics), figsize=(4 * len(metrics), 4), tight_layout=True
+    )
+    plt.close(fig)
+    for i, m in enumerate(metrics):
+        train_metrics = []
+        val_metrics = []
+        if x_lim > len(train_metrics):
+            ax[i].set_xlim(right=x_lim)
+        ax[i].set_title(m)
+        if not hasattr(learner, "history"):
+            continue
+        for idx, data in enumerate(learner.history):
+            if m in data:
+                train_metrics.append((idx, data[m]))
+            if f"val_{m}" in data:
+                val_metrics.append((idx, data[f"val_{m}"]))
+
+        if plot_smooth_training > 0:
+            smooth_train_metrics = denoise(train_metrics, plot_smooth_training)
+            lines = ax[i].plot(*zip(*smooth_train_metrics), label=f"Train {m}")
+            ax[i].plot(*zip(*train_metrics), color=lines[0].get_color(), alpha=0.3)
+        else:
+            ax[i].plot(*zip(*train_metrics), label=f"Train {m}")
+        ax[i].plot(*zip(*val_metrics), label=f"Val {m}")
+        if plot_skip > 0:
+            _train_metrics = train_metrics[plot_skip:]
+
+            if _train_metrics and val_metrics:
+                y_min = min(
+                    min(y for _, y in _train_metrics), min(y for _, y in val_metrics)
+                )
+                y_max = max(
+                    max(y for _, y in _train_metrics), max(y for _, y in val_metrics)
+                )
+                ax[i].set_ylim([y_min, y_max])
+        ax[i].legend()
+
+    return fig
+
+# %% ../nbs/06_training.ipynb 14
+class ProgressBarCallback:
+    def __init__(
+        self,
+        metrics=["loss"],  # metrics to display, must be in the `learner.history`` dict
+        plot=True,  # plot the metrics
+        plot_train_skip_ylim=10,  # skip the first N training metrics when calculating the ylim
+        plot_smooth_training=0,  # smooth the training metrics with a moving average of N
+    ) -> None:
+        self.metrics = metrics
+        self.plot = plot
+        self.plot_skip = plot_train_skip_ylim
+        self.plot_smooth_trainig = plot_smooth_training
+        self.plot_handle = None
+        self.stats_handle = None
+
+    def pre_fit(self, learner: Learner):
         self.mbar = tqdm(
             initial=learner.start_epoch,
             total=learner.start_epoch + learner.n_epochs,
-            desc="Epochs",
+            desc="Epoch",
         )
-        self.pbar = tqdm(leave=False)
-        print_metrics_header(self.metrics, self.mbar)
+        self.pbar = tqdm(
+            leave=False,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]{postfix}",
+        )
+        if self.plot:
+            self.plot_handle = display(
+                plot_metrics(
+                    learner,
+                    self.metrics,
+                    plot_skip=self.plot_skip,
+                    x_lim=learner.n_epochs * len(learner.dataloaders.train),
+                ),
+                display_id=True,
+            )
+        self.stats = print_metrics_header(self.metrics)
+        self.stats_handle = display(
+            HTML("<b><pre>" + self.stats + "</pre></b>"), display_id=True
+        )
 
     def post_epoch(self, learner):
         self.mbar.update(1)
-        print_metrics(learner, self.metrics, self.mbar)
-        self.mbar.set_description_str(f"Epoch")
+        self.stats += print_metrics(learner, self.metrics)
+        self.stats_handle.update(HTML("<b><pre>" + self.stats + "</pre></b>"))
+
+        self.mbar.refresh()
+        self.pbar.refresh()
 
     def pre_all_batches(self, learner):
         self.pbar.reset(total=len(learner.dl))
@@ -249,6 +349,18 @@ class ProgressBarCallback:
             self.pbar.set_description_str(f"{learner.epoch:<3}: Train")
         else:
             self.pbar.set_description_str(f"{learner.epoch:<3}: Valid")
+
+    def post_all_batches(self, learner):
+        if self.plot:
+            self.plot_handle.update(
+                plot_metrics(
+                    learner,
+                    self.metrics,
+                    plot_skip=self.plot_skip,
+                    x_lim=learner.n_epochs * len(learner.dataloaders.train),
+                    plot_smooth_training=self.plot_smooth_trainig,
+                )
+            )
 
     def post_calc_loss(self, learner):
         self.pbar.update(1)
