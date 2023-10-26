@@ -152,7 +152,7 @@ class Learner:
         self.optimizer.zero_grad()
 
 # %% ../nbs/06_training.ipynb 8
-from tqdm.auto import tqdm
+from tqdm.autonotebook import tqdm
 
 # %% ../nbs/06_training.ipynb 9
 def one_hot_encode_batch(y, n_classes):

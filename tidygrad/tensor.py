@@ -370,7 +370,7 @@ class ExpLog(UnaryElementwiseOp):
             1 - 1 / (1 + np.exp(self.parents[0].data))
         )
 
-# %% ../nbs/01_tensor.ipynb 7
+# %% ../nbs/01_tensor.ipynb 8
 class Tensor:
     # op = "L"
     name: str = ""

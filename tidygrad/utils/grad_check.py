@@ -16,7 +16,7 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000):
         data_view = p.data.reshape(-1)  # This does not make a copy
         grad_view = p.grad.reshape(-1)
 
-        slow_grad = np.zeros_like(grad_view)
+        slow_grad = np.zeros_like(p.grad)
         slow_grad_view = slow_grad.reshape(-1)
 
         indices = np.random.choice(
@@ -24,6 +24,9 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000):
         )
 
         indices = list(filter(lambda idx: abs(grad_view[idx]) > eps, indices))  # XXX?
+        if len(indices) == 0:
+            print(f"Skipping {p.name} because all gradients are zero")
+            continue
         for idx in indices:
             old_val = data_view[idx]
 
