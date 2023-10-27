@@ -117,10 +117,10 @@ class Pad(UnaryElementwiseOp):
     def __init__(self, a, padding: Union[int, Tuple[int, int]], name=None):
         super().__init__(a, name=name)
         self.padding = (padding, padding) if isinstance(padding, int) else padding
-        self.out = Tensor(np_pad(a.data, self.padding), name=self.name, op=self)
+        self.out = Tensor(np_pad2d(a.data, self.padding), name=self.name, op=self)
 
     def backward(self):
-        self.parents[0].grad += np_unpad(self.out.grad, self.padding)
+        self.parents[0].grad += np_unpad2d(self.out.grad, self.padding)
         # pY, pX = self.padding
         # slices = (slice(None),) * (len(self.args[0].shape) - 2) \
         #     + (slice(pY, -pY),) + (slice(pX, -pX),)

@@ -9,10 +9,16 @@ from ..functional import relu
 import numpy as np
 
 # %% ../../nbs/10_utils.grad_check.ipynb 3
-def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000):
+def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False):
+    grad_failed = False
+    # for p in reversed(params):
+    #     p.grad = np.zeros_like(p.data)
+    # loss = func(inputs, params)
+    # loss.backward()
+
     for p in reversed(params):
         # Reshape to 1D so it's easier to sample random indices
-
+        num_failed = num_skipped = num_checked = 0
         data_view = p.data.reshape(-1)  # This does not make a copy
         grad_view = p.grad.reshape(-1)
 
@@ -22,11 +28,13 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000):
         indices = np.random.choice(
             np.arange(grad_view.size), size=min(n, grad_view.size), replace=False
         )
-
-        indices = list(filter(lambda idx: abs(grad_view[idx]) > eps, indices))  # XXX?
-        if len(indices) == 0:
-            print(f"Skipping {p.name} because all gradients are zero")
-            continue
+        good_indices = []
+        # indices = list(filter(lambda idx: abs(slow_grad_view[idx]) > eps, indices))  # XXX?
+        # if len(indices) == 0:
+        #     print(f"Skipping {p.name} because all gradients are zero")
+        #     continue
+        # else:
+        #     print(f"Checking {p.name} with {len(indices)} non-zero gradients")
         for idx in indices:
             old_val = data_view[idx]
 
@@ -36,21 +44,30 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000):
             loss_plus_h = func(inputs, params)
 
             slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
-
-            # print(f"{idx}: loss_plus_h: {loss_plus_h.data}, loss: {loss.data}, diff: {loss_plus_h.data - loss.data}, grad: {grad_view[idx]}, slow_grad: {slow_grad_view[idx]}")
+            if verbose:
+                print(
+                    f"{idx}: loss_plus_h: {loss_plus_h.data}, loss: {loss.data}, diff: {loss_plus_h.data - loss.data}, grad: {grad_view[idx]}, slow_grad: {slow_grad_view[idx]}"
+                )
             data_view[idx] = old_val
 
-        max_grad_diff = np.max(
-            np.abs(
-                (slow_grad_view[indices] - grad_view[indices])
-                / np.maximum(
-                    np.abs(slow_grad_view[indices]), np.abs(grad_view[indices])
-                )
-            )
-        )
+            if abs(slow_grad_view[idx]) > eps:
+                good_indices.append(idx)
 
-        print(f"Max gradient difference for {p.name}: {max_grad_diff*100:.4f}%")
+        differences = (
+            slow_grad_view[good_indices] - grad_view[good_indices]
+        ) / slow_grad_view[good_indices]
+        max_grad_diff = np.max(np.abs(differences))
+        print(
+            f"Max fractional gradient difference for {p.name}: {max_grad_diff*100:.4f}%"
+        )
         if max_grad_diff > 1e-2:
-            raise ValueError(
-                f"Gradient check failed for {p.name}: Max error: {max_grad_diff*100:.4f}"
-            )
+            grad_failed = True
+            print("Failed!")
+            print("Slow grad: ", slow_grad)
+            print("Fast grad: ", p.grad)
+            print("Differences: ", differences)
+
+    if grad_failed:
+        raise ValueError(
+            f"Gradient check failed for {p.name}: Max error: {max_grad_diff*100:.4f}"
+        )
