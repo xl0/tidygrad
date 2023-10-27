@@ -1,5 +1,8 @@
 datasets/
 
+.vscode/
+.DS_Store
+
 # nbdev stuff
 _proc
 
