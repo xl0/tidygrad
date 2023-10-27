@@ -111,15 +111,16 @@ class Pad(UnaryElementwiseOp):
 
     name_template = "pad2d({})"
 
-    def __init__(self, a, pad: int, name=None):
+    def __init__(self, a, padSize: int, name=None):
         super().__init__(a, name=name)
-        assert (
-            len(self.args[0].shape) == 4
-        ), "Only 4D tensors supported for now. And we pad xy"
-        self.padding = pad
-        self.out = Tensor(np_pad(a.data, pad), name=self.name, op=self)
+        self.padSize = (padSize, padSize) if isinstance(padSize, int) else padSize
+        self.out = Tensor(np_pad(a.data, self.padSize), name=self.name, op=self)
 
     def backward(self):
-        self.parents[0].grad += self.out.grad[
-            :, :, self.padding : -self.padding, self.padding : -self.padding
-        ]
+        pY, pX = self.padSize
+        slices = (
+            (slice(None),) * (len(self.args[0].shape) - 2)
+            + (slice(pY, -pY),)
+            + (slice(pX, -pX),)
+        )
+        self.parents[0].grad += self.out.grad[slices]
