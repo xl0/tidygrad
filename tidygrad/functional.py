@@ -106,21 +106,22 @@ def dropout(x, p=0.5, training=True):
     return Dropout(x, p_drop=p, training=training).out
 
 # %% ../nbs/02_functional.ipynb 13
+from typing import Union, Tuple
+
+# %% ../nbs/02_functional.ipynb 16
 class Pad(UnaryElementwiseOp):
     """Pad a tensor"""
 
     name_template = "pad2d({})"
 
-    def __init__(self, a, padSize: int, name=None):
+    def __init__(self, a, padding: Union[int, Tuple[int, int]], name=None):
         super().__init__(a, name=name)
-        self.padSize = (padSize, padSize) if isinstance(padSize, int) else padSize
-        self.out = Tensor(np_pad(a.data, self.padSize), name=self.name, op=self)
+        self.padding = (padding, padding) if isinstance(padding, int) else padding
+        self.out = Tensor(np_pad(a.data, self.padding), name=self.name, op=self)
 
     def backward(self):
-        pY, pX = self.padSize
-        slices = (
-            (slice(None),) * (len(self.args[0].shape) - 2)
-            + (slice(pY, -pY),)
-            + (slice(pX, -pX),)
-        )
-        self.parents[0].grad += self.out.grad[slices]
+        self.parents[0].grad += np_unpad(self.out.grad, self.padding)
+        # pY, pX = self.padding
+        # slices = (slice(None),) * (len(self.args[0].shape) - 2) \
+        #     + (slice(pY, -pY),) + (slice(pX, -pX),)
+        # self.parents[0].grad += self.out.grad[slices]
