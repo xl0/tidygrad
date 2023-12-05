@@ -4,6 +4,18 @@
 __all__ = ['sigmoid', 'softmax', 'relu', 'BCE_loss', 'CrossEntropy_loss', 'dropout', 'Pad']
 
 # %% ../nbs/02_functional.ipynb 2
+import os
+
+# os.environ["OMP_NUM_THREADS"] = "1"
+# os.environ["OPENBLAS_NUM_THREADS"] = "1"
+# os.environ["MKL_NUM_THREADS"] = "1"
+# os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+# os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+# MKL_NUM_THREADS=1
+# NUMEXPR_NUM_THREADS=1
+# OMP_NUM_THREADS=1
+
 import numpy as np
 from tidygrad.tensor import (
     Tensor,
@@ -21,9 +33,11 @@ class Sigmoid(UnaryElementwiseOp):
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
-        self.out = Tensor(1 / (1 + np.exp(-self.args[0].data)), name=self.name, op=self)
+        # self.out = Tensor(1 / (1 + np.exp(-self.args[0].data)), name=self.name, op=self)
+        self.set_out(1 / (1 + np.exp(-self.args[0].data)))
 
     def backward(self):
+        self.check_backward()
         with np.errstate(under="ignore"):  # Triggered by infinitesimally small 1-data
             self.parents[0].grad += self.out.grad * self.out.data * (1 - self.out.data)
 
@@ -44,9 +58,11 @@ class Relu(UnaryElementwiseOp):
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
-        self.out = Tensor(np.maximum(0, self.args[0].data), name=self.name, op=self)
+        # self.out = Tensor(np.maximum(0, self.args[0].data), name=self.name, op=self)
+        self.set_out(np.maximum(0, self.args[0].data))
 
     def backward(self):
+        self.check_backward()
         self.parents[0].grad += self.out.grad * (self.out.data > 0)
 
 # %% ../nbs/02_functional.ipynb 7
@@ -91,24 +107,47 @@ class Dropout(UnaryElementwiseOp):
             self.mask = np.random.binomial(
                 scale_factor, 1 - p_drop, size=self.args[0].data.shape
             )
-            self.out = Tensor(self.args[0].data * self.mask, name=self.name, op=self)
+            # self.out = Tensor(self.args[0].data * self.mask, name=self.name, op=self)
+            self.set_out(self.args[0].data * self.mask)
         else:
-            self.out = Tensor(self.args[0].data, name=self.name, op=self)
+            # self.out = Tensor(self.args[0].data, name=self.name, op=self)
+            self.set_out(self.args[0].data)
 
     def backward(self):
+        self.check_backward()
         self.parents[0].grad += self.out.grad * (self.mask if self.training else 1)
 
 # %% ../nbs/02_functional.ipynb 11
+class Embedding(UnaryElementwiseOp):
+    """Embedding layer"""
+
+    name_template = "embedding({})"
+
+    def __init__(self, a, indices, name=None):
+        super().__init__(a, name=name)
+        self.indices = indices
+        # self.out = Tensor(self.args[0].data[self.indices], name=self.name, op=self)
+        self.set_out(self.args[0].data[self.indices])
+
+    def backward(self):
+        self.check_backward()
+        self.parents[0].grad[self.indices] += self.out.grad
+
+# %% ../nbs/02_functional.ipynb 12
+def embedding(input, indices, name=None):
+    return Embedding(input, indices, name=name).out
+
+# %% ../nbs/02_functional.ipynb 13
 def dropout(x, p=0.5, training=True):
     if p == 0:
         return x
 
     return Dropout(x, p_drop=p, training=training).out
 
-# %% ../nbs/02_functional.ipynb 13
+# %% ../nbs/02_functional.ipynb 15
 from typing import Union, Tuple
 
-# %% ../nbs/02_functional.ipynb 16
+# %% ../nbs/02_functional.ipynb 18
 class Pad(UnaryElementwiseOp):
     """Pad a tensor"""
 

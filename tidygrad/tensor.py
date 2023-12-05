@@ -12,6 +12,9 @@ class Tensor:
     ...
 
 # %% ../nbs/01_tensor.ipynb 3
+_grad = True
+
+# %% ../nbs/01_tensor.ipynb 4
 def calculate_target_shape(s1, s2):
     """Calculate the target shape for broadcasting two tensors"""
 
@@ -27,7 +30,7 @@ def calculate_target_shape(s1, s2):
 
     return out_shape
 
-# %% ../nbs/01_tensor.ipynb 4
+# %% ../nbs/01_tensor.ipynb 5
 def maybe_broadcast_elementwise(a: Tensor, b: Tensor):
     """Broadcast two tensors if they have different shapes"""
     if a.data.shape != b.data.shape:
@@ -65,7 +68,7 @@ def maybe_broadcast_matmul(a: Tensor, b: Tensor):
 
     return a, b
 
-# %% ../nbs/01_tensor.ipynb 5
+# %% ../nbs/01_tensor.ipynb 6
 class BaseOp:
     """Base class for all operations"""
 
@@ -87,6 +90,18 @@ class BaseOp:
             if name is None
             else name
         )
+        self.requires_grad = any(arg.requires_grad for arg in self.args) and _grad
+
+    def set_out(self, data):
+        self.out = Tensor(
+            data=data, requires_grad=self.requires_grad, name=self.name, op=self
+        )
+
+    def check_backward(self):
+        # Add more checks here?
+        assert (
+            self.out.requires_grad
+        ), f"You are trying to backpropagate through a non-differentiable operation:\n{self}"
 
     def __repr__(self):
         return (
@@ -99,7 +114,8 @@ class BinaryElementwiseOp(BaseOp):
 
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
-        self.parents = self.args = maybe_broadcast_elementwise(*self.args)
+        self.args = maybe_broadcast_elementwise(*self.args)
+        self.parents = self.args if self.requires_grad else []
 
 
 class UnaryElementwiseOp(BaseOp):
@@ -107,9 +123,9 @@ class UnaryElementwiseOp(BaseOp):
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
-        self.parents = self.args
+        self.parents = self.args if self.requires_grad else []
 
-# %% ../nbs/01_tensor.ipynb 6
+# %% ../nbs/01_tensor.ipynb 7
 class Load(BaseOp):
     """Load a tensor"""
 
@@ -127,13 +143,13 @@ class Add(BinaryElementwiseOp):
 
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
-        self.out = Tensor(
-            data=self.args[0].data + self.args[1].data, name=self.name, op=self
-        )
+        # self.out = Tensor(data=self.args[0].data + self.args[1].data, name=self.name, op=self, requires_grad=self.requires_grad)
+        self.set_out(self.args[0].data + self.args[1].data)
 
     def backward(self):
-        self.parents[0].grad += self.out.grad
-        self.parents[1].grad += self.out.grad
+        self.check_backward()
+        self.parents[0].accum_grad(self.out.grad)
+        self.parents[1].accum_grad(self.out.grad)
 
 
 class Sub(BinaryElementwiseOp):
@@ -143,13 +159,13 @@ class Sub(BinaryElementwiseOp):
 
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
-        self.out = Tensor(
-            data=self.args[0].data - self.args[1].data, name=self.name, op=self
-        )
+        self.set_out(self.args[0].data - self.args[1].data)
+        # self.out = Tensor(data=self.args[0].data - self.args[1].data, name=self.name, op=self)
 
     def backward(self):
-        self.parents[0].grad += self.out.grad
-        self.parents[1].grad -= self.out.grad
+        self.check_backward()
+        self.parents[0].accum_grad(self.out.grad)
+        self.parents[1].accum_grad(-self.out.grad)
 
 
 class Mul(BinaryElementwiseOp):
@@ -159,13 +175,13 @@ class Mul(BinaryElementwiseOp):
 
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
-        self.out = Tensor(
-            data=self.args[0].data * self.args[1].data, name=self.name, op=self
-        )
+        # self.out = Tensor(data=self.args[0].data * self.args[1].data, name=self.name, op=self)
+        self.set_out(self.args[0].data * self.args[1].data)
 
     def backward(self):
-        self.parents[0].grad += self.out.grad * self.parents[1].data
-        self.parents[1].grad += self.out.grad * self.parents[0].data
+        self.check_backward()
+        self.parents[0].accum_grad(self.out.grad * self.parents[1].data)
+        self.parents[1].accum_grad(self.out.grad * self.parents[0].data)
 
 
 class Div(BinaryElementwiseOp):
@@ -175,14 +191,14 @@ class Div(BinaryElementwiseOp):
 
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
-        self.out = Tensor(
-            data=self.args[0].data / self.args[1].data, name=self.name, op=self
-        )
+        # self.out = Tensor(data=self.args[0].data / self.args[1].data, name=self.name, op=self)
+        self.set_out(self.args[0].data / self.args[1].data)
 
     def backward(self):
-        self.parents[0].grad += self.out.grad / self.parents[1].data
-        self.parents[1].grad -= (
-            self.out.grad * self.parents[0].data / (self.parents[1].data ** 2)
+        self.check_backward()
+        self.parents[0].accum_grad(self.out.grad / self.parents[1].data)
+        self.parents[1].accum_grad(
+            -self.out.grad * self.parents[0].data / (self.parents[1].data ** 2)
         )
 
 
@@ -193,10 +209,30 @@ class Neg(UnaryElementwiseOp):
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
-        self.out = Tensor(-self.args[0].data, name=self.name, op=self)
+        # self.out = Tensor(-self.args[0].data, name=self.name, op=self)
+        self.set_out(-self.args[0].data)
 
     def backward(self):
-        self.parents[0].grad -= self.out.grad
+        self.check_backward()
+        self.parents[0].accum_grad(-self.out.grad)
+
+
+class Pow(UnaryElementwiseOp):
+    """Raise a tensor to a power"""
+
+    # name_template = "pow({},?)"
+
+    def __init__(self, a, power, name=None):
+        self.name_template = f"pow({{}},{power})"
+        super().__init__(a, name=name)
+        self.power = power
+        self.set_out(self.args[0].data ** power)
+
+    def backward(self):
+        self.check_backward()
+        self.parents[0].accum_grad(
+            (self.out.grad * self.power * self.parents[0].data ** (self.power - 1))
+        )
 
 
 class Log(UnaryElementwiseOp):
@@ -206,11 +242,12 @@ class Log(UnaryElementwiseOp):
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
-
-        self.out = Tensor(np.log(self.args[0].data), name=self.name, op=self)
+        # self.out = Tensor(np.log(self.args[0].data), name=self.name, op=self)
+        self.set_out(np.log(self.args[0].data))
 
     def backward(self):
-        self.parents[0].grad += self.out.grad / self.parents[0].data
+        self.check_backward()
+        self.parents[0].accum_grad(self.out.grad / self.parents[0].data)
 
 
 class Exp(UnaryElementwiseOp):
@@ -220,11 +257,12 @@ class Exp(UnaryElementwiseOp):
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
-
-        self.out = Tensor(np.exp(self.args[0].data), name=self.name, op=self)
+        # self.out = Tensor(np.exp(self.args[0].data), name=self.name, op=self)
+        self.set_out(np.exp(self.args[0].data))
 
     def backward(self):
-        self.parents[0].grad += self.out.grad * self.out.data
+        self.check_backward()
+        self.parents[0].accum_grad(self.out.grad * self.out.data)
 
 
 class Matmul(BaseOp):
@@ -234,19 +272,22 @@ class Matmul(BaseOp):
 
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
-        self.parents = self.args = maybe_broadcast_matmul(*self.args)
-        self.out = Tensor(
-            np.matmul(self.args[0].data, self.args[1].data),
-            name=self.name,
-            op=self,
-        )
+        self.args = maybe_broadcast_matmul(*self.args)
+        self.parents = self.args if self.requires_grad else []
+        # self.out = Tensor(
+        #     np.matmul(self.args[0].data, self.args[1].data),
+        #     name=self.name,
+        #     op=self,
+        # )
+        self.set_out(np.matmul(self.args[0].data, self.args[1].data))
 
     def backward(self):
-        self.parents[0].grad += np.matmul(
-            self.out.grad, self.parents[1].data.swapaxes(-1, -2)
+        self.check_backward()
+        self.parents[0].accum_grad(
+            np.matmul(self.out.grad, self.parents[1].data.swapaxes(-1, -2))
         )
-        self.parents[1].grad += np.matmul(
-            self.parents[0].data.swapaxes(-1, -2), self.out.grad
+        self.parents[1].accum_grad(
+            np.matmul(self.parents[0].data.swapaxes(-1, -2), self.out.grad)
         )
 
 
@@ -258,15 +299,13 @@ class Sum(BaseOp):
     def __init__(self, a, name=None, axis=None, keepdims=False):
         super().__init__(a, name=name)
         # self.axis = axis
-        self.parents = self.args
-        self.out = Tensor(
-            np.sum(self.args[0].data, axis=axis, keepdims=keepdims),
-            name=self.name,
-            op=self,
-        )
+        self.parents = self.args if self.requires_grad else []
+        # self.out = Tensor(np.sum(self.args[0].data, axis=axis, keepdims=keepdims), name=self.name, op=self)
+        self.set_out(np.sum(self.args[0].data, axis=axis, keepdims=keepdims))
 
     def backward(self):
-        self.parents[0].grad += self.out.grad
+        self.check_backward()
+        self.parents[0].accum_grad(self.out.grad)
 
 
 class Broadcast(BaseOp):
@@ -277,7 +316,7 @@ class Broadcast(BaseOp):
     def __init__(self, a, target_shape, name=None):
         super().__init__(a, name=name)
         self.target_shape = target_shape
-        self.parents = self.args
+        self.parents = self.args if self.requires_grad else []
         self_shape = self.args[0].data.shape
         assert self_shape != target_shape, "Why are you broadcasting to the same shape?"
 
@@ -307,16 +346,18 @@ class Broadcast(BaseOp):
         data = broadcasted_data
         self.broadcasted_dims = broadcasted_dims
 
-        self.out = Tensor(data, name=self.name, op=self)
+        # self.out = Tensor(data, name=self.name, op=self)
+        self.set_out(data)
 
     def backward(self):
+        self.check_backward()
         axis = tuple([i for i, dim in enumerate(self.broadcasted_dims) if dim])
         summed = self.out.grad.sum(axis=axis, keepdims=True)
 
         if summed.shape != self.parents[0].data.shape:
             summed = summed.reshape(self.parents[0].data.shape)
 
-        self.parents[0].grad += summed
+        self.parents[0].accum_grad(summed)
 
 
 # class LessThan(BinaryElementwiseOp):
@@ -329,8 +370,8 @@ class Broadcast(BaseOp):
 #         )
 
 #     # def backward(self):
-#     #     self.parents[0].grad += self.out.grad * (self.parents[0].data < self.parents[1].data)
-#     #     self.parents[1].grad += self.out.grad * (self.parents[0].data >= self.parents[1].data)
+#     #     self.parents[0].accum_grad(self.out.grad * (self.parents[0].data < self.parents[1].data)
+#     #     self.parents[1].accum_grad(self.out.grad * (self.parents[0].data >= self.parents[1].data)
 
 # class Where(BaseOp):
 #     name_template = "where({})"
@@ -345,11 +386,11 @@ class Broadcast(BaseOp):
 #         )
 
 #     def backward(self):
-#         # self.parents[0].grad += self.out.grad * self.parents[1].data
-#         # self.parents[0].grad += self.out.grad * self.parents[2].data
+#         # self.parents[0].accum_grad(self.out.grad * self.parents[1].data
+#         # self.parents[0].accum_grad(self.out.grad * self.parents[2].data
 
-#         self.parents[1].grad += self.out.grad * self.parents[0].data
-#         self.parents[2].grad += self.out.grad * (1 - self.parents[0].data)
+#         self.parents[1].accum_grad(self.out.grad * self.parents[0].data
+#         self.parents[2].accum_grad(self.out.grad * (1 - self.parents[0].data)
 
 
 class ExpLog(UnaryElementwiseOp):
@@ -363,34 +404,49 @@ class ExpLog(UnaryElementwiseOp):
         def logexp(x):
             return np.where(x < 0, np.log(1 + np.exp(x)), x + np.log(1 + np.exp(-x)))
 
-        self.out = Tensor(logexp(self.args[0].data), name=self.name, op=self)
+        # self.out = Tensor(logexp(self.args[0].data), name=self.name, op=self)
+        self.set_out(logexp(self.args[0].data))
 
     def backward(self):
-        self.parents[0].grad += self.out.grad * (
-            1 - 1 / (1 + np.exp(self.parents[0].data))
+        self.check_backward()
+        self.parents[0].accum_grad(
+            self.out.grad * (1 - 1 / (1 + np.exp(self.parents[0].data)))
         )
 
-# %% ../nbs/01_tensor.ipynb 8
+# %% ../nbs/01_tensor.ipynb 9
 class Tensor:
     # op = "L"
     name: str = ""
 
-    def __init__(self, data, name=None, op=None, eps=1e-8):
+    def __init__(self, data, name=None, op=None, eps=1e-8, requires_grad=False):
         self.data = np.asarray(data)
-        self.grad = np.zeros_like(self.data, dtype=np.float32)
+
+        self.grad = (
+            np.zeros_like(self.data, dtype=np.float32) if requires_grad else None
+        )
         self.eps = eps
         self.op = op or Load(name=name)
         self.name = name or self.op.name
+        self.requires_grad = requires_grad
 
     def __repr__(self):
         value_str = f"v={lovely(self.data)}"
-        grad_str = f"∇={lovely(self.grad)}"
+        grad_str = f"∇={lovely(self.grad)}" if self.grad is not None else ""
         parents = (
             f" parents=[" + ",".join([p.name for p in self.op.parents]) + "]"
             if self.op.parents
             else ""
         )
         return f'Tensor{list(self.data.shape)}(name="{self.name}" op={type(self.op).__name__}{parents}):\n    {value_str}\n    {grad_str}'
+
+    def accum_grad(self, grad):
+        if not self.requires_grad:
+            return
+
+        if self.grad is None:
+            self.grad = grad
+        else:
+            self.grad += grad
 
     def broadcast(self, target_shape, name=None):
         return Broadcast(self, target_shape, name=name).out
@@ -410,6 +466,9 @@ class Tensor:
     def neg(self, name=None):
         return Neg(self, name=name).out
 
+    def pow(self, power, name=None):
+        return Pow(self, power, name=name).out
+
     def log(self, name=None):
         return Log(self, name=name).out
 
@@ -424,9 +483,18 @@ class Tensor:
 
     def mean(self, name=None, axis=None, keepdims=False):
         reduced = np.prod(self.data.shape)
+        if isinstance(axis, int):
+            axis = (axis,)
         if axis:
             reduced = np.prod([self.data.shape[i] for i in axis])
         return Sum(self, name=name, axis=axis, keepdims=keepdims).out / reduced
+
+    def std(self, name=None, axis=None, keepdims=False, correction=1):
+        var = (self - self.mean(axis=axis, keepdims=keepdims)) ** 2
+
+        corrected = var.sum(axis=axis, keepdims=keepdims) / (var.data.size - correction)
+
+        return corrected**0.5
 
     # def lt(self, other, name=None):
     #     return LessThan(self, other, name=name).out
@@ -458,6 +526,9 @@ class Tensor:
     def __neg__(self):
         return self.neg()
 
+    def __pow__(self, power):
+        return self.pow(power)
+
     def equal(self, other):
         other = other if isinstance(other, Tensor) else Tensor(other)
         return self.data == other.data
@@ -479,7 +550,7 @@ class Tensor:
 
         def walk(node):
             for p in node.op.parents:
-                if p not in visited:
+                if p not in visited and p.requires_grad:
                     visited.append(p)
                     walk(p)
                     nodes.append(p)
@@ -494,4 +565,5 @@ class Tensor:
                 n.op.backward()
 
     def zero_grad(self):
+        assert self.requires_grad, "Cannot zero grad on non-differentiable tensor"
         self.grad.fill(0)
