@@ -490,9 +490,24 @@ class Tensor:
         return Sum(self, name=name, axis=axis, keepdims=keepdims).out / reduced
 
     def std(self, name=None, axis=None, keepdims=False, correction=1):
-        var = (self - self.mean(axis=axis, keepdims=keepdims)) ** 2
+        if isinstance(axis, int):
+            axis = (axis,)
 
-        corrected = var.sum(axis=axis, keepdims=keepdims) / (var.data.size - correction)
+        v1 = self - self.mean(axis=axis, keepdims=True)
+        v1.name = "v1"
+        # print(v1)
+
+        var = (v1) ** 2
+        var.name = "var"
+        # print(var)
+
+        numel = (
+            np.prod(self.data.shape)
+            if axis is None
+            else np.prod([self.data.shape[i] for i in axis])
+        )
+
+        corrected = var.sum(axis=axis, keepdims=keepdims) / (numel - correction)
 
         return corrected**0.5
 
