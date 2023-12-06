@@ -4,6 +4,7 @@
 __all__ = ['grad_check']
 
 # %% ../../nbs/10_utils.grad_check.ipynb 2
+import tidygrad
 from ..tensor import Tensor
 from ..functional import relu
 import numpy as np
@@ -15,6 +16,8 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False
     #     p.grad = np.zeros_like(p.data)
     # loss = func(inputs, params)
     # loss.backward()
+
+    tidygrad.tensor._grad = False
 
     for p in reversed(params):
         # Reshape to 1D so it's easier to sample random indices
@@ -66,6 +69,8 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False
             print("Slow grad: ", slow_grad)
             print("Fast grad: ", p.grad)
             print("Differences: ", differences)
+
+    tidygrad.tensor._grad = True
 
     if grad_failed:
         raise ValueError(
