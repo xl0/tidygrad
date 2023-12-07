@@ -69,12 +69,17 @@ def maybe_broadcast_matmul(a: Tensor, b: Tensor):
     return a, b
 
 # %% ../nbs/01_tensor.ipynb 6
+_num_ops = 0
+
+
 class BaseOp:
     """Base class for all operations"""
 
     name_template = "??"
 
     def __init__(self, *args, name: str = None):
+        global _num_ops
+        _num_ops += 1
         assert isinstance(
             name, (str, type(None))
         ), f"name= should be str, got {type(name)}. You probably meant something else."
@@ -85,11 +90,7 @@ class BaseOp:
             else Tensor(data=np.asarray(arg, dtype=np.float32))
             for arg in args
         ]
-        self.name = (
-            self.name_template.format(*[arg.name for arg in self.args])
-            if name is None
-            else name
-        )
+        self.name = ""  # (self.name_template.format(*[arg.name for arg in self.args]) if name is None else name)
         self.requires_grad = any(arg.requires_grad for arg in self.args) and _grad
 
     def set_out(self, data):
@@ -360,6 +361,38 @@ class Broadcast(BaseOp):
         self.parents[0].accum_grad(summed)
 
 
+class Slice(UnaryElementwiseOp):
+    name_template = "slice({})"
+
+    def __init__(self, a, key, name=None):
+        super().__init__(a, name=name)
+        self.key = key
+        self.set_out(self.args[0].data[key])
+
+    def backward(self):
+        self.check_backward()
+        p = self.parents[0]
+
+        if not p.requires_grad:
+            return
+
+        if p.grad is None:
+            p.grad = np.zeros_like(p.data)
+
+        p.grad[self.key] += self.out.grad
+
+
+# class SetSlice(BaseOp):
+#     name_template = "setslice({})"
+
+#     def __init__(self, a: Tensor, key, value: Tensor, name=None):
+#         # super().__init__(a, value, name=name)
+#         self.key = key
+
+#         a.out[key] = value.out
+#         a.parents.append(value)
+
+
 # class LessThan(BinaryElementwiseOp):
 #     name_template = "({}<{})"
 
@@ -414,11 +447,16 @@ class ExpLog(UnaryElementwiseOp):
         )
 
 # %% ../nbs/01_tensor.ipynb 9
+_num_tensors = 0
+
+
 class Tensor:
     # op = "L"
     name: str = ""
 
     def __init__(self, data, name=None, op=None, eps=1e-8, requires_grad=False):
+        global _num_tensors
+        _num_tensors += 1
         self.data = np.asarray(data)
 
         self.grad = (
@@ -437,7 +475,8 @@ class Tensor:
             if self.op.parents
             else ""
         )
-        return f'Tensor{list(self.data.shape)}(name="{self.name}" op={type(self.op).__name__}{parents}):\n    {value_str}\n    {grad_str}'
+        # name="{self.name}
+        return f'Tensor{list(self.data.shape)}(" op={type(self.op).__name__}{parents}):\n    {value_str}\n    {grad_str}'
 
     def accum_grad(self, grad):
         if not self.requires_grad:
@@ -547,6 +586,12 @@ class Tensor:
     def equal(self, other):
         other = other if isinstance(other, Tensor) else Tensor(other)
         return self.data == other.data
+
+    def __getitem__(self, key):
+        return Slice(self, key).out
+
+    def __setitem__(self, key, value):
+        return SetSlice(self, key, value)
 
     @property
     def shape(self):

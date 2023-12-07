@@ -66,13 +66,13 @@ class Tanh(UnaryElementwiseOp):
 # %% ../nbs/02_functional.ipynb 6
 # TODO? Rewrite as native.
 def tanh(input, name=None):
-    return Tanh(input, name=name).out
+    # return Tanh(input, name=name).out
     # ex = input.exp()
     # emx = (-input).exp()
 
     # return (ex - emx) / (ex + emx)
 
-    # return 2 * sigmoid(2 * input, name=name) - 1
+    return 2 * sigmoid(2 * input, name=name) - 1
 
 # %% ../nbs/02_functional.ipynb 7
 def softmax(input, name=None):
