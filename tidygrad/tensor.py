@@ -14,6 +14,18 @@ class Tensor:
 # %% ../nbs/01_tensor.ipynb 3
 _grad = True
 
+
+class no_grad:
+    def __enter__(self):
+        global _grad
+        self.old_grad = _grad
+        _grad = False
+        return self
+
+    def __exit__(self, *args):
+        global _grad
+        _grad = self.old_grad
+
 # %% ../nbs/01_tensor.ipynb 4
 def calculate_target_shape(s1, s2):
     """Calculate the target shape for broadcasting two tensors"""
@@ -92,6 +104,7 @@ class BaseOp:
         ]
         self.name = ""  # (self.name_template.format(*[arg.name for arg in self.args]) if name is None else name)
         self.requires_grad = any(arg.requires_grad for arg in self.args) and _grad
+        self.parents = []
 
     def set_out(self, data):
         self.out = Tensor(
@@ -116,7 +129,8 @@ class BinaryElementwiseOp(BaseOp):
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
         self.args = maybe_broadcast_elementwise(*self.args)
-        self.parents = self.args if self.requires_grad else []
+        if self.requires_grad:
+            self.parents = self.args
 
 
 class UnaryElementwiseOp(BaseOp):
@@ -124,7 +138,8 @@ class UnaryElementwiseOp(BaseOp):
 
     def __init__(self, a, name=None):
         super().__init__(a, name=name)
-        self.parents = self.args if self.requires_grad else []
+        if self.requires_grad:
+            self.parents = self.args
 
 # %% ../nbs/01_tensor.ipynb 7
 class Load(BaseOp):
@@ -134,7 +149,6 @@ class Load(BaseOp):
 
     def __init__(self, name=None):
         super().__init__(name=name)
-        self.parents = []
 
 
 class Add(BinaryElementwiseOp):
@@ -274,12 +288,9 @@ class Matmul(BaseOp):
     def __init__(self, a, b, name=None):
         super().__init__(a, b, name=name)
         self.args = maybe_broadcast_matmul(*self.args)
-        self.parents = self.args if self.requires_grad else []
-        # self.out = Tensor(
-        #     np.matmul(self.args[0].data, self.args[1].data),
-        #     name=self.name,
-        #     op=self,
-        # )
+        if self.requires_grad:
+            self.parents = self.args
+
         self.set_out(np.matmul(self.args[0].data, self.args[1].data))
 
     def backward(self):
@@ -446,6 +457,20 @@ class ExpLog(UnaryElementwiseOp):
             self.out.grad * (1 - 1 / (1 + np.exp(self.parents[0].data)))
         )
 
+
+class Transpose(UnaryElementwiseOp):
+    """Transpose a tensor"""
+
+    name_template = "transpose({})"
+
+    def __init__(self, a, dim0, dim1, name=None):
+        super().__init__(a, name=name)
+        # self.out = Tensor(np.transpose(self.args[0].data), name=self.name, op=self)
+        self.set_out(np.swapaxes(self.args[0].data, dim0, dim1))
+
+    def backward(self):
+        pass
+
 # %% ../nbs/01_tensor.ipynb 9
 _num_tensors = 0
 
@@ -520,6 +545,19 @@ class Tensor:
     def sum(self, name=None, axis=None, keepdims=False):
         return Sum(self, name=name, axis=axis, keepdims=keepdims).out
 
+    def transpose(
+        self,
+        dim0: int,
+        dim1: int,
+        name=None,
+    ):
+        return Transpose(
+            self,
+            dim0,
+            dim1,
+            name=name,
+        ).out
+
     def mean(self, name=None, axis=None, keepdims=False):
         reduced = np.prod(self.data.shape)
         if isinstance(axis, int):
@@ -590,8 +628,8 @@ class Tensor:
     def __getitem__(self, key):
         return Slice(self, key).out
 
-    def __setitem__(self, key, value):
-        return SetSlice(self, key, value)
+    # def __setitem__(self, key, value):
+    #     return SetSlice(self, key, value)
 
     @property
     def shape(self):

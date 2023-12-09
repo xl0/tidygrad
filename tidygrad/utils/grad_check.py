@@ -17,60 +17,57 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False
     # loss = func(inputs, params)
     # loss.backward()
 
-    tidygrad.tensor._grad = False
+    with tidygrad.no_grad():
+        for p in reversed(params):
+            # Reshape to 1D so it's easier to sample random indices
+            num_failed = num_skipped = num_checked = 0
+            data_view = p.data.reshape(-1)  # This does not make a copy
+            grad_view = p.grad.reshape(-1)
 
-    for p in reversed(params):
-        # Reshape to 1D so it's easier to sample random indices
-        num_failed = num_skipped = num_checked = 0
-        data_view = p.data.reshape(-1)  # This does not make a copy
-        grad_view = p.grad.reshape(-1)
+            slow_grad = np.zeros_like(p.grad)
+            slow_grad_view = slow_grad.reshape(-1)
 
-        slow_grad = np.zeros_like(p.grad)
-        slow_grad_view = slow_grad.reshape(-1)
+            indices = np.random.choice(
+                np.arange(grad_view.size), size=min(n, grad_view.size), replace=False
+            )
+            good_indices = []
+            # indices = list(filter(lambda idx: abs(slow_grad_view[idx]) > eps, indices))  # XXX?
+            # if len(indices) == 0:
+            #     print(f"Skipping {p.name} because all gradients are zero")
+            #     continue
+            # else:
+            #     print(f"Checking {p.name} with {len(indices)} non-zero gradients")
+            for idx in indices:
+                old_val = data_view[idx]
 
-        indices = np.random.choice(
-            np.arange(grad_view.size), size=min(n, grad_view.size), replace=False
-        )
-        good_indices = []
-        # indices = list(filter(lambda idx: abs(slow_grad_view[idx]) > eps, indices))  # XXX?
-        # if len(indices) == 0:
-        #     print(f"Skipping {p.name} because all gradients are zero")
-        #     continue
-        # else:
-        #     print(f"Checking {p.name} with {len(indices)} non-zero gradients")
-        for idx in indices:
-            old_val = data_view[idx]
+                loss = func(inputs, params)
 
-            loss = func(inputs, params)
+                data_view[idx] = old_val + eps
+                loss_plus_h = func(inputs, params)
 
-            data_view[idx] = old_val + eps
-            loss_plus_h = func(inputs, params)
+                slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
+                if verbose:
+                    print(
+                        f"{idx}: loss_plus_h: {loss_plus_h.data}, loss: {loss.data}, diff: {loss_plus_h.data - loss.data}, grad: {grad_view[idx]}, slow_grad: {slow_grad_view[idx]}"
+                    )
+                data_view[idx] = old_val
 
-            slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
-            if verbose:
-                print(
-                    f"{idx}: loss_plus_h: {loss_plus_h.data}, loss: {loss.data}, diff: {loss_plus_h.data - loss.data}, grad: {grad_view[idx]}, slow_grad: {slow_grad_view[idx]}"
-                )
-            data_view[idx] = old_val
+                if abs(slow_grad_view[idx]) > eps:
+                    good_indices.append(idx)
 
-            if abs(slow_grad_view[idx]) > eps:
-                good_indices.append(idx)
-
-        differences = (
-            slow_grad_view[good_indices] - grad_view[good_indices]
-        ) / slow_grad_view[good_indices]
-        max_grad_diff = np.max(np.abs(differences))
-        print(
-            f"Max fractional gradient difference for {p.name}: {max_grad_diff*100:.4f}%"
-        )
-        if max_grad_diff > 1e-2:
-            grad_failed = True
-            print("Failed!")
-            print("Slow grad: ", slow_grad)
-            print("Fast grad: ", p.grad)
-            print("Differences: ", differences)
-
-    tidygrad.tensor._grad = True
+            differences = (
+                slow_grad_view[good_indices] - grad_view[good_indices]
+            ) / slow_grad_view[good_indices]
+            max_grad_diff = np.max(np.abs(differences))
+            print(
+                f"Max fractional gradient difference for {p.name}: {max_grad_diff*100:.4f}%"
+            )
+            if max_grad_diff > 1e-2:
+                grad_failed = True
+                print("Failed!")
+                print("Slow grad: ", slow_grad)
+                print("Fast grad: ", p.grad)
+                print("Differences: ", differences)
 
     if grad_failed:
         raise ValueError(
