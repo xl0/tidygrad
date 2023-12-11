@@ -4,10 +4,8 @@
 __all__ = ['grad_check']
 
 # %% ../../nbs/10_utils.grad_check.ipynb 2
-import tidygrad
-from ..tensor import Tensor
-from ..functional import relu
 import numpy as np
+import tidygrad as tg
 
 # %% ../../nbs/10_utils.grad_check.ipynb 3
 def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False):
@@ -17,7 +15,7 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False
     # loss = func(inputs, params)
     # loss.backward()
 
-    with tidygrad.no_grad():
+    with tg.no_grad():
         for p in reversed(params):
             # Reshape to 1D so it's easier to sample random indices
             num_failed = num_skipped = num_checked = 0

@@ -4,8 +4,6 @@
 __all__ = ['load_mnist', 'load_fashion_mnist', 'MNIST', 'mnist_batch_tfm']
 
 # %% ../../nbs/11_utils.datasets.ipynb 1
-import os
-import requests
 import numpy as np
 import gzip
 

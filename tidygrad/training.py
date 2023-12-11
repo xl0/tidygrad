@@ -5,7 +5,7 @@ __all__ = ['add_callbacks', 'DictLoggerCallback', 'Learner', 'one_hot_encode_bat
            'metrics_last_pretty', 'print_metrics_header', 'print_metrics', 'ProgressBarCallback']
 
 # %% ../nbs/06_training.ipynb 2
-from .tensor import Tensor
+from . import Tensor
 from .utils import noop
 import numpy as np
 
@@ -152,7 +152,7 @@ class Learner:
         self.optimizer.zero_grad()
 
 # %% ../nbs/06_training.ipynb 8
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 
 # %% ../nbs/06_training.ipynb 9
 def one_hot_encode_batch(y, n_classes):
