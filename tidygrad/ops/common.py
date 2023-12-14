@@ -63,7 +63,7 @@ def maybe_broadcast_matmul(a, b):
 
     return a, b
 
-# %% ../../nbs/02_ops.common.ipynb 6
+# %% ../../nbs/02_ops.common.ipynb 7
 _num_ops = 0
 
 
@@ -96,8 +96,9 @@ class BaseOp:
     def set_out(self, data):
         from tidygrad.tensor import Tensor
 
+        op = self if self.requires_grad else None
         self.out = Tensor(
-            data=data, requires_grad=self.requires_grad, name=self.name, op=self
+            data=data, requires_grad=self.requires_grad, name=self.name, op=op
         )
 
     def check_backward(self):
@@ -130,7 +131,7 @@ class UnaryElementwiseOp(BaseOp):
         if self.requires_grad:
             self.parents = self.args
 
-# %% ../../nbs/02_ops.common.ipynb 7
+# %% ../../nbs/02_ops.common.ipynb 8
 class Load(BaseOp):
     """Load a tensor"""
 
@@ -139,7 +140,7 @@ class Load(BaseOp):
     def __init__(self, name=None):
         super().__init__(name=name)
 
-# %% ../../nbs/02_ops.common.ipynb 8
+# %% ../../nbs/02_ops.common.ipynb 9
 class Add(BinaryElementwiseOp):
     """Add two tensors"""
 
@@ -157,7 +158,7 @@ class Add(BinaryElementwiseOp):
         self.parents[0].accum_grad(self.out.grad)
         self.parents[1].accum_grad(self.out.grad)
 
-# %% ../../nbs/02_ops.common.ipynb 9
+# %% ../../nbs/02_ops.common.ipynb 10
 class Sub(BinaryElementwiseOp):
     """Subtract two tensors"""
 
@@ -172,7 +173,7 @@ class Sub(BinaryElementwiseOp):
         self.parents[0].accum_grad(self.out.grad)
         self.parents[1].accum_grad(-self.out.grad)
 
-# %% ../../nbs/02_ops.common.ipynb 10
+# %% ../../nbs/02_ops.common.ipynb 11
 class Mul(BinaryElementwiseOp):
     """Multiply two tensors"""
 
@@ -184,10 +185,11 @@ class Mul(BinaryElementwiseOp):
 
     def backward(self):
         self.check_backward()
+
         self.parents[0].accum_grad(self.out.grad * self.parents[1].data)
         self.parents[1].accum_grad(self.out.grad * self.parents[0].data)
 
-# %% ../../nbs/02_ops.common.ipynb 11
+# %% ../../nbs/02_ops.common.ipynb 12
 class Div(BinaryElementwiseOp):
     """Divide two tensors"""
 
@@ -204,7 +206,7 @@ class Div(BinaryElementwiseOp):
             -self.out.grad * self.parents[0].data / (self.parents[1].data ** 2)
         )
 
-# %% ../../nbs/02_ops.common.ipynb 12
+# %% ../../nbs/02_ops.common.ipynb 13
 class Neg(UnaryElementwiseOp):
     """Negate a tensor"""
 
@@ -218,7 +220,7 @@ class Neg(UnaryElementwiseOp):
         self.check_backward()
         self.parents[0].accum_grad(-self.out.grad)
 
-# %% ../../nbs/02_ops.common.ipynb 13
+# %% ../../nbs/02_ops.common.ipynb 14
 class Pow(UnaryElementwiseOp):
     """Raise a tensor to a power"""
 
@@ -230,11 +232,12 @@ class Pow(UnaryElementwiseOp):
 
     def backward(self):
         self.check_backward()
-        self.parents[0].accum_grad(
-            (self.out.grad * self.power * self.parents[0].data ** (self.power - 1))
-        )
+        with np.errstate(divide="ignore"):
+            self.parents[0].accum_grad(
+                (self.out.grad * self.power * self.parents[0].data ** (self.power - 1))
+            )
 
-# %% ../../nbs/02_ops.common.ipynb 14
+# %% ../../nbs/02_ops.common.ipynb 15
 class Log(UnaryElementwiseOp):
     """Take the natural logarithm of a tensor"""
 
@@ -248,7 +251,7 @@ class Log(UnaryElementwiseOp):
         self.check_backward()
         self.parents[0].accum_grad(self.out.grad / self.parents[0].data)
 
-# %% ../../nbs/02_ops.common.ipynb 15
+# %% ../../nbs/02_ops.common.ipynb 16
 class Exp(UnaryElementwiseOp):
     """Exponentiate a tensor"""
 
@@ -262,7 +265,7 @@ class Exp(UnaryElementwiseOp):
         self.check_backward()
         self.parents[0].accum_grad(self.out.grad * self.out.data)
 
-# %% ../../nbs/02_ops.common.ipynb 16
+# %% ../../nbs/02_ops.common.ipynb 17
 class ExpLog(UnaryElementwiseOp):
     """Exponentiate a tensor"""
 
@@ -282,7 +285,7 @@ class ExpLog(UnaryElementwiseOp):
             self.out.grad * (1 - 1 / (1 + np.exp(self.parents[0].data)))
         )
 
-# %% ../../nbs/02_ops.common.ipynb 17
+# %% ../../nbs/02_ops.common.ipynb 18
 class Matmul(BaseOp):
     """Matrix multiplication of two tensors"""
 
@@ -305,13 +308,19 @@ class Matmul(BaseOp):
             np.matmul(self.parents[0].data.swapaxes(-1, -2), self.out.grad)
         )
 
-# %% ../../nbs/02_ops.common.ipynb 18
+# %% ../../nbs/02_ops.common.ipynb 19
 class Sum(BaseOp):
     """Sum-reduce a tensor along the given axis (int or tuple of ints)"""
 
     name_template = "sum({})"
 
-    def __init__(self, a, name=None, axis=None, keepdims=False):
+    def __init__(
+        self,
+        a,
+        axis=None,
+        keepdims=False,
+        name=None,
+    ):
         super().__init__(a, name=name)
         self.parents = self.args if self.requires_grad else []
         self.set_out(np.sum(self.args[0].data, axis=axis, keepdims=keepdims))
@@ -320,7 +329,7 @@ class Sum(BaseOp):
         self.check_backward()
         self.parents[0].accum_grad(self.out.grad)  # This will broadcast correctly
 
-# %% ../../nbs/02_ops.common.ipynb 19
+# %% ../../nbs/02_ops.common.ipynb 20
 class Broadcast(BaseOp):
     """Broadcast a tensor to the given shape"""
 
@@ -371,7 +380,7 @@ class Broadcast(BaseOp):
 
         self.parents[0].accum_grad(summed)
 
-# %% ../../nbs/02_ops.common.ipynb 20
+# %% ../../nbs/02_ops.common.ipynb 21
 class Slice(UnaryElementwiseOp):
     name_template = "slice({})"
 
@@ -392,7 +401,7 @@ class Slice(UnaryElementwiseOp):
 
         p.grad[self.key] += self.out.grad
 
-# %% ../../nbs/02_ops.common.ipynb 22
+# %% ../../nbs/02_ops.common.ipynb 23
 class Transpose(UnaryElementwiseOp):
     """Transpose a tensor"""
 
@@ -400,12 +409,15 @@ class Transpose(UnaryElementwiseOp):
 
     def __init__(self, a, dim0, dim1, name=None):
         super().__init__(a, name=name)
+        self.dim0 = dim0
+        self.dim1 = dim1
         self.set_out(np.swapaxes(self.args[0].data, dim0, dim1))
 
     def backward(self):
-        pass
+        self.check_backward()
+        self.parents[0].accum_grad(np.swapaxes(self.out.grad, self.dim0, self.dim1))
 
-# %% ../../nbs/02_ops.common.ipynb 23
+# %% ../../nbs/02_ops.common.ipynb 24
 class Dropout(UnaryElementwiseOp):
     """Apply Dropout to a tensor"""
 
@@ -431,9 +443,9 @@ class Dropout(UnaryElementwiseOp):
 
     def backward(self):
         self.check_backward()
-        self.parents[0].grad += self.out.grad * (self.mask if self.training else 1)
+        self.parents[0].accum_grad(self.out.grad * (self.mask if self.training else 1))
 
-# %% ../../nbs/02_ops.common.ipynb 24
+# %% ../../nbs/02_ops.common.ipynb 25
 class Embedding(UnaryElementwiseOp):
     """Embedding layer"""
 
@@ -446,4 +458,6 @@ class Embedding(UnaryElementwiseOp):
 
     def backward(self):
         self.check_backward()
+        if self.parents[0].grad is None:
+            self.parents[0].grad = np.zeros_like(self.parents[0].data, dtype=np.float32)
         self.parents[0].grad[self.indices] += self.out.grad

@@ -25,7 +25,7 @@ def std(input: Tensor, name=None, axis=None, keepdims=False, correction=1) -> Te
     if isinstance(axis, int):
         axis = (axis,)
     v1 = input - input.mean(axis=axis, keepdims=True)
-    var = (v1) ** 2
+    var = v1**2
 
     if axis is None:
         numel = np.prod(input.data.shape)

@@ -123,6 +123,13 @@ def softmax(input: Tensor, name=None) -> Tensor:
 def layer_norm(x: Tensor, w: Tensor, b: Tensor, eps=1e-5) -> Tensor:
     mu = x.mean(axis=-1, keepdims=True)
     sigma = x.std(axis=-1, keepdims=True, correction=0)
+    if sigma.data.any() == 0:
+        print("x", x)
+        print("w", w)
+        print("b", b)
+        print("mu", mu)
+        print("sigma", sigma)
+        raise ValueError("sigma is zero")
 
     return (
         (x - mu) / (sigma + eps)
@@ -152,7 +159,7 @@ def CrossEntropy_loss(logits: Tensor, target: Tensor, reduction="mean"):
     sm = softmax(logits)
     loss = -target * sm.log()
     if reduction == "mean":
-        return loss.mean()
+        return loss.mean(axis=-1, keepdims=True)
     if reduction == "sum":
-        return loss.sum()
+        return loss.sum(axis=-1, keepdims=True)
     assert 0, "Invalid reduction"

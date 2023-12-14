@@ -35,10 +35,10 @@ class Tensor:
     def __init__(self, data, name=None, op=None, eps=1e-8, requires_grad=False):
         global _num_tensors
         _num_tensors += 1
-        self.data = np.asarray(data)
+        self.data = np.asarray(data, dtype=np.float64)  # , dtype=np.float32
 
         self.grad = (
-            np.zeros_like(self.data, dtype=np.float32) if requires_grad else None
+            np.zeros_like(self.data, dtype=np.float64) if requires_grad else None
         )
         self.eps = eps
         self.op = op or ops.Load(name=name)
@@ -53,8 +53,8 @@ class Tensor:
             if self.op.parents
             else ""
         )
-        # name="{self.name}
-        return f'Tensor{list(self.data.shape)}(" op={type(self.op).__name__}{parents}):\n    {value_str}\n    {grad_str}'
+
+        return f'Tensor{list(self.data.shape)}(name="{self.name}" op={type(self.op).__name__}{parents}):\n    {value_str}\n    {grad_str}'
 
     def accum_grad(self, grad):
         if not self.requires_grad:
@@ -95,8 +95,19 @@ class Tensor:
     def mmul(self, other, name=None):
         return ops.Matmul(self, other, name=name).out
 
-    def sum(self, name=None, axis=None, keepdims=False):
-        return ops.Sum(self, name=name, axis=axis, keepdims=keepdims).out
+    # XXX move name to the end of arg list
+    def sum(
+        self,
+        name=None,
+        axis=None,
+        keepdims=False,
+    ):
+        return ops.Sum(
+            self,
+            axis=axis,
+            keepdims=keepdims,
+            name=name,
+        ).out
 
     def transpose(
         self,

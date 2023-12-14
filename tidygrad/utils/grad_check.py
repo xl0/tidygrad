@@ -23,7 +23,8 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False
             grad_view = p.grad.reshape(-1)
 
             slow_grad = np.zeros_like(p.grad)
-            slow_grad_view = slow_grad.reshape(-1)
+
+            scaled_slow_grad_view = slow_grad.reshape(-1)
 
             indices = np.random.choice(
                 np.arange(grad_view.size), size=min(n, grad_view.size), replace=False
@@ -43,19 +44,26 @@ def grad_check(func, inputs, params: tuple = (), eps=1e-5, n=1000, verbose=False
                 data_view[idx] = old_val + eps
                 loss_plus_h = func(inputs, params)
 
-                slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
+                scaled_slow_grad_view[idx] = (loss_plus_h.data - loss.data) / eps
+                # slow_grad_view[idx] =
+
+                # (loss_plus_h.data - loss.data) / eps
+
                 if verbose:
                     print(
-                        f"{idx}: loss_plus_h: {loss_plus_h.data}, loss: {loss.data}, diff: {loss_plus_h.data - loss.data}, grad: {grad_view[idx]}, slow_grad: {slow_grad_view[idx]}"
+                        f"{idx}: loss_plus_h: {loss_plus_h.data}, loss: {loss.data}, diff: {loss_plus_h.data - loss.data}, grad: {grad_view[idx]}, slow_grad: {scaled_slow_grad_view[idx] / eps}"
                     )
                 data_view[idx] = old_val
 
-                if abs(slow_grad_view[idx]) > eps:
+                if abs(scaled_slow_grad_view[idx]) > eps:
                     good_indices.append(idx)
 
             differences = (
-                slow_grad_view[good_indices] - grad_view[good_indices]
-            ) / slow_grad_view[good_indices]
+                scaled_slow_grad_view[good_indices] - grad_view[good_indices]
+            ) / (grad_view[good_indices])
+
+            # slow_grad /= eps
+
             max_grad_diff = np.max(np.abs(differences))
             print(
                 f"Max fractional gradient difference for {p.name}: {max_grad_diff*100:.4f}%"

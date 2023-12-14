@@ -156,14 +156,17 @@ from tqdm.auto import tqdm
 
 # %% ../nbs/06_training.ipynb 9
 def one_hot_encode_batch(y, n_classes):
-    batch_size = len(y)
+    diag = np.eye(n_classes)
+    return Tensor(diag[y])
+
+    batch_size = y.shape[0]
     assert batch_size > 0
     assert n_classes > 0
-    assert y.shape == (batch_size,)
+    # assert y.shape[0] == batch_size
     assert np.min(y) >= 0
 
     # Initialize a zero matrix of shape (batch_size, num_classes)
-    one_hot_matrix = np.zeros((batch_size, n_classes))
+    one_hot_matrix = np.zeros((*y.shape, n_classes))
 
     # Fill in the appropriate elements
     one_hot_matrix[np.arange(batch_size), y] = 1

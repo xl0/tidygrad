@@ -17,4 +17,4 @@ split_before_bitwise_operator=True
 split_before_closing_bracket=False
 split_before_dot=True
 split_complex_comprehension=True
-blank_lines_around_top_level_definition=1
+blank_lines_around_top_level_definition=1 
