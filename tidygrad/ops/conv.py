@@ -3,7 +3,7 @@
 # %% auto 0
 __all__ = ['Pad']
 
-# %% ../../nbs/02_ops.conv.ipynb 2
+# %% ../../nbs/02_ops.conv.ipynb 3
 import os
 
 import numpy as np
@@ -12,10 +12,10 @@ from tidygrad.ops import (
     BaseOp,
 )
 
-# %% ../../nbs/02_ops.conv.ipynb 3
+# %% ../../nbs/02_ops.conv.ipynb 4
 from typing import Union, Tuple
 
-# %% ../../nbs/02_ops.conv.ipynb 6
+# %% ../../nbs/02_ops.conv.ipynb 7
 class Pad(UnaryElementwiseOp):
     """Pad a tensor"""
 

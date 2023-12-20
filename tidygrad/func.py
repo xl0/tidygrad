@@ -158,6 +158,7 @@ def CrossEntropy_loss(logits: Tensor, target: Tensor, reduction="mean"):
         target = Tensor(target)
     sm = softmax(logits)
     loss = -target * sm.log()
+
     if reduction == "mean":
         return loss.mean(axis=-1, keepdims=True)
     if reduction == "sum":
