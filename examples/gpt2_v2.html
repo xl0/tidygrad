@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>tidygrad - GPT2 inference</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+<script src="https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js" crossorigin="anonymous"></script>
+
+
+<link rel="stylesheet" href="../styles.css">
+<meta property="og:title" content="tidygrad - GPT2 inference">
+<meta property="og:description" content="">
+<meta property="og:site-name" content="tidygrad">
+<meta name="twitter:title" content="tidygrad - GPT2 inference">
+<meta name="twitter:description" content="">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">tidygrad</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../examples/gpt2_training.html">examples</a></li><li class="breadcrumb-item"><a href="../examples/gpt2_v2.html">GPT2 inference</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">TidyGrad</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tensor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Tensor class</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tensor_helpers.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Tensor class</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../func.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Functions that operate on tensors</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ops.activation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Functional operations: Activation functions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ops.common.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Operations: Common</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ops.conv.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Functional operations: Convolution and Pooling</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ops.shape.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Operations: Reshaping</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../03_optim.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Optimizers</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../04_model.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">04_model.html</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../06_training.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Training loop stuff</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../10_utils.data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">10_utils.data.html</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../10_utils.grad_check.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Tidy Utils</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../11_utils.datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">11_utils.datasets.html</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">examples</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../examples/gpt2_training.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GPT2-Nano training</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../examples/gpt2_v2.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">GPT2 inference</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../examples/tinystories_prepare.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">TinyStories dataset pre-processing.</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../examples/tinystories_tokenizer.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">tinystories_tokenizer.html</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text">tests</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tests/test_ops.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Binary elementwise ops</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tests/02_train_xor.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Train a logical xor funciton using a neural network</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">GPT2 inference</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tidygrad</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tidygrad.tensor <span class="im">import</span> Tensor</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tidygrad.func <span class="im">as</span> F</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># from tidygrad.func import  embedding, layer_norm, stack, concat</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lovely_numpy <span class="im">import</span> Lo</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> GPT2Tokenizer</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> safetensors <span class="im">import</span> safe_open</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># !wget -c https://huggingface.co/gpt2/resolve/main/model.safetensors        -O ./downloaded_weights/gpt2.safetensors</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># !wget -c https://huggingface.co/gpt2-medium/resolve/main/model.safetensors -O ./downloaded_weights/gpt2-medium.safetensors</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># !wget -c https://huggingface.co/gpt2-large/resolve/main/model.safetensors  -O ./downloaded_weights/gpt2-large.safetensors</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># !wget -c https://huggingface.co/gpt2-xl/resolve/main/model.safetensors     -O ./downloaded_weights/gpt2-xl.safetensors</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Gpt2Variant:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, weight_file, n_head, n_layer):</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.weight_file <span class="op">=</span> weight_file</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.n_head <span class="op">=</span> n_head</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.n_layer <span class="op">=</span> n_layer</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>gpt2_variants <span class="op">=</span> {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"gpt2"</span>: Gpt2Variant(<span class="st">"gpt2.safetensors"</span>, <span class="dv">12</span>, <span class="dv">12</span>),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"gpt2-medium"</span>: Gpt2Variant(<span class="st">"gpt2-medium.safetensors"</span>, <span class="dv">16</span>, <span class="dv">24</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"gpt2-large"</span>: Gpt2Variant(<span class="st">"gpt2-large.safetensors"</span>, <span class="dv">20</span>, <span class="dv">36</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"gpt2-xl"</span>: Gpt2Variant(<span class="st">"gpt2-xl.safetensors"</span>, <span class="dv">25</span>, <span class="dv">48</span>),</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>gpt2_variant <span class="op">=</span> <span class="st">"gpt2"</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>weights_dir <span class="op">=</span> <span class="st">"./downloaded_weights/"</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">"In a hole in the ground there lived a"</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> GPT2Tokenizer.from_pretrained(gpt2_variant)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co"># tokens = tokenizer.encode(text)  # returns a list of integers</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co"># tokens = Tensor(tokens)</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>tokens <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">9</span>, <span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> safe_open(weights_dir <span class="op">+</span> gpt2_variants[gpt2_variant].weight_file, framework<span class="op">=</span><span class="st">"np"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Tensor(model.get_tensor(<span class="st">"wte.weight"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>Tensor[50257, 768](name="" op=Load):
+    v=array[50257, 768] f32 n=38597376 (0.1Gb) x∈[-1.270, 1.785] μ=0.000 σ=0.144
+    </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> safetensors</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tidygrad.func <span class="im">as</span> F</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>nn.Module capabilities:</p>
+<ol start="0" type="1">
+<li><p>Abstract neural network “modules”, like Linear of Conv2D.</p></li>
+<li><p>Assignment tracks parameters</p></li>
+</ol>
+<p>class MyModel(Module): def <strong>init</strong>(): self.w1 = Tensort(…) self.b2 = Tens….</p>
+<pre><code># w1, b1 are tracked as parameters</code></pre>
+<p>Then you can call model.parameters() to get a list of parameters.</p>
+<ol start="2" type="1">
+<li><p>Save / load weights. Also, count weights.</p></li>
+<li><p>Fun forward/backward pass on the model.</p></li>
+</ol>
+<section id="pytorch" class="level4">
+<h4 class="anchored" data-anchor-id="pytorch">Pytorch</h4>
+<p>class nn.Linear(): ….</p>
+<p>class Model(nn.Module): <strong>init</strong>: self.l1 = nn.Linear(…) self.ln = …</p>
+<pre><code>forward(x):
+    x = self.l1(x) 
+    x = self.conv(x)
+    ....
+    return x</code></pre>
+<p>model = Model(…)</p>
+<p>y = model(x)</p>
+</section>
+<section id="tidygrad" class="level4">
+<h4 class="anchored" data-anchor-id="tidygrad">TidyGrad</h4>
+<p>y = x.mmul(w) + b</p>
+<p>class ModelTensors(Dict): <strong>init</strong></p>
+<pre><code>load(st: safetensor):
+    for k in st.keys():
+        self.params[k] = st.get_tensor(k)
+
+save():
+    .....
+    return st</code></pre>
+<p>model = ModelTensors</p>
+<p>a = model[“h0.ln1.w”] # Returns Tensor a = models.h0.ln1.w</p>
+<p>model.parameters() ==&gt; Return list of params</p>
+<p>optim = SGD(model.params(), lr=9000)</p>
+<p>def transformer()…</p>
+<p>loss = transformer(X, y, model) loss.backwards()</p>
+<p>optim.step()</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> transformer_block(model, i, <span class="bu">input</span>, n_head):</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    dim <span class="op">=</span> <span class="bu">input</span>.shape[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> dim <span class="op">%</span> n_head <span class="op">==</span> <span class="dv">0</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    ln_1_w <span class="op">=</span> model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.ln_1.weight"</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    ln_1_b <span class="op">=</span> model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.ln_1.bias"</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    ln_1 <span class="op">=</span> F.layer_norm(<span class="bu">input</span>, ln_1_w, ln_1_b)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ln_1.ad</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    attn_w_qkv <span class="op">=</span> model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.attn.c_attn.weight"</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    attn_b_qkv <span class="op">=</span> model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.attn.c_attn.bias"</span>)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    attn_w_q, attn_w_k, attn_w_v <span class="op">=</span> np.split(attn_w_qkv, <span class="dv">3</span>, axis<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    attn_b_q, attn_b_k, attn_b_v <span class="op">=</span> np.split(attn_b_qkv, <span class="dv">3</span>, axis<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    q <span class="op">=</span> ln_1.mmul(attn_w_q) <span class="op">+</span> attn_b_q</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    k <span class="op">=</span> ln_1.mmul(attn_w_k) <span class="op">+</span> attn_b_k</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    v <span class="op">=</span> ln_1.mmul(attn_w_v) <span class="op">+</span> attn_b_v</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># q_chunked = split_tensor(q, axis=-1, n=12)</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># k_chunked = split_tensor(k, axis=-1, n=12)</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># v_chunked = split_tensor(v, axis=-1, n=12)</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>    q_chunked <span class="op">=</span> F.stack(q.split(n<span class="op">=</span>n_head, axis<span class="op">=-</span><span class="dv">1</span>), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>    k_chunked <span class="op">=</span> F.stack(k.split(n<span class="op">=</span>n_head, axis<span class="op">=-</span><span class="dv">1</span>), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>    v_chunked <span class="op">=</span> F.stack(v.split(n<span class="op">=</span>n_head, axis<span class="op">=-</span><span class="dv">1</span>), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>    attention <span class="op">=</span> q_chunked.mmul(k_chunked.transpose(<span class="op">-</span><span class="dv">1</span>, <span class="op">-</span><span class="dv">2</span>)) <span class="op">/</span> np.sqrt(dim <span class="op">/</span> n_head)</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>    mask <span class="op">=</span> np.tril(np.ones(attention.shape), k<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>    ee <span class="op">=</span> np.exp(attention) <span class="op">*</span> mask</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>    softmaxed <span class="op">=</span> ee <span class="op">/</span> ee.<span class="bu">sum</span>(axis<span class="op">=-</span><span class="dv">1</span>, keepdims<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>    attention_output <span class="op">=</span> softmaxed.mmul(v_chunked)</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    attention_chunks <span class="op">=</span> attention_output.split(axis<span class="op">=</span><span class="dv">0</span>, n<span class="op">=</span>n_head)</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print("attention_chunks", attention_chunks)</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>    attention_reshaped <span class="op">=</span> F.concat(attention_chunks, axis<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>    attention_reshaped <span class="op">=</span> attention_reshaped[<span class="dv">0</span>]</span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print("attention_reshaped", attention_reshaped)</span></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>    cproj_w <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.attn.c_proj.weight"</span>))</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>    cproj_b <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.attn.c_proj.bias"</span>))</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>    <span class="co"># attention_reshaped = Tensor(attention_reshaped_np)</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>    crosstalk <span class="op">=</span> attention_reshaped.mmul(cproj_w) <span class="op">+</span> cproj_b</span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>    after_residual <span class="op">=</span> crosstalk <span class="op">+</span> <span class="bu">input</span></span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print("after_residual", after_residual)</span></span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a>    ln2_w <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.ln_2.weight"</span>), name<span class="op">=</span><span class="st">"ln2_w"</span>)</span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a>    ln2_b <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.ln_2.bias"</span>), name<span class="op">=</span><span class="st">"ln2_b"</span>)</span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a>    after_ln2 <span class="op">=</span> F.layer_norm(after_residual, ln2_w, ln2_b)</span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a>    mlp_c_fc_w <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.mlp.c_fc.weight"</span>), name<span class="op">=</span><span class="st">"fc_w"</span>)</span>
+<span id="cb13-59"><a href="#cb13-59" aria-hidden="true" tabindex="-1"></a>    mlp_c_fc_b <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.mlp.c_fc.bias"</span>), name<span class="op">=</span><span class="st">"fc_b"</span>)</span>
+<span id="cb13-60"><a href="#cb13-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-61"><a href="#cb13-61" aria-hidden="true" tabindex="-1"></a>    after_up <span class="op">=</span> after_ln2.mmul(mlp_c_fc_w) <span class="op">+</span> mlp_c_fc_b</span>
+<span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print("after_up", after_up)</span></span>
+<span id="cb13-63"><a href="#cb13-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-64"><a href="#cb13-64" aria-hidden="true" tabindex="-1"></a>    after_up_a <span class="op">=</span> F.gelu(after_up)</span>
+<span id="cb13-65"><a href="#cb13-65" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print("after_up_a", after_up_a)</span></span>
+<span id="cb13-66"><a href="#cb13-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-67"><a href="#cb13-67" aria-hidden="true" tabindex="-1"></a>    mlp_c_proj_w <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.mlp.c_proj.weight"</span>), name<span class="op">=</span><span class="st">"proj_w"</span>)</span>
+<span id="cb13-68"><a href="#cb13-68" aria-hidden="true" tabindex="-1"></a>    mlp_c_proj_b <span class="op">=</span> Tensor(model.get_tensor(<span class="ss">f"h.</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">.mlp.c_proj.bias"</span>), name<span class="op">=</span><span class="st">"proj_b"</span>)</span>
+<span id="cb13-69"><a href="#cb13-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-70"><a href="#cb13-70" aria-hidden="true" tabindex="-1"></a>    after_down <span class="op">=</span> after_up_a.mmul(mlp_c_proj_w) <span class="op">+</span> mlp_c_proj_b</span>
+<span id="cb13-71"><a href="#cb13-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-72"><a href="#cb13-72" aria-hidden="true" tabindex="-1"></a>    output <span class="op">=</span> after_down <span class="op">+</span> after_residual</span>
+<span id="cb13-73"><a href="#cb13-73" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> output</span>
+<span id="cb13-74"><a href="#cb13-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-75"><a href="#cb13-75" aria-hidden="true" tabindex="-1"></a><span class="co"># res = transformer_block(model, 0, embeddings)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> transformer(model, tokens, n_layer, n_head):</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    wte <span class="op">=</span> Tensor(model.get_tensor(<span class="st">"wte.weight"</span>))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    wpe <span class="op">=</span> Tensor(model.get_tensor(<span class="st">"wpe.weight"</span>))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    token_embeddings <span class="op">=</span> F.embedding(wte, tokens)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    positions <span class="op">=</span> np.arange(<span class="bu">len</span>(tokens))</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    position_embeddings <span class="op">=</span> F.embedding(wpe, positions)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    embeddings <span class="op">=</span> token_embeddings <span class="op">+</span> position_embeddings</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_layer):</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print("Layer", i)</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>        embeddings <span class="op">=</span> transformer_block(model, i, embeddings, n_head)</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print("Embedding out:", embeddings)</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(tidygrad.tensor._num_tensors)</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(tidygrad.tensor._num_ops)</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    ln_f_w <span class="op">=</span> Tensor(model.get_tensor(<span class="st">"ln_f.weight"</span>))</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    ln_f_b <span class="op">=</span> Tensor(model.get_tensor(<span class="st">"ln_f.bias"</span>))</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    res <span class="op">=</span> F.layer_norm(embeddings, ln_f_w, ln_f_b)</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> res</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="co"># tokens = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="co"># with tidygrad.no_grad():</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="co">#     res = transformer(model, tokens, gpt2_variants[gpt2_variant].n_layer, gpt2_variants[gpt2_variant].n_head)</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a><span class="co">#     print(res)</span></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a><span class="co"># import gc</span></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a><span class="co"># del res</span></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a><span class="co"># gc.collect()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>model.get_tensor(<span class="st">"wte.weight"</span>).shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>(50257, 768)</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">"In a hole in the ground there lived a"</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>tokenizer <span class="op">=</span> GPT2Tokenizer.from_pretrained(gpt2_variant)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>tokens <span class="op">=</span> tokenizer.encode(text)  <span class="co"># returns a list of integers</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(tokens)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co"># tokens = list(range(1000))</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gpt2_language_model(model, token_ids, n_layer, n_head):</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    wte <span class="op">=</span> Tensor(model.get_tensor(<span class="st">"wte.weight"</span>).swapaxes(<span class="op">-</span><span class="dv">1</span>, <span class="op">-</span><span class="dv">2</span>))</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    res <span class="op">=</span> transformer(model, token_ids, n_layer, n_head)</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    res <span class="op">=</span> res[<span class="op">-</span><span class="dv">1</span>, :]</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    logits <span class="op">=</span> res.mmul(wte)</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> logits, res</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tidygrad.no_grad():</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    logits, res <span class="op">=</span> gpt2_language_model(model, tokens, n_layer<span class="op">=</span>gpt2_variants[gpt2_variant].n_layer, n_head<span class="op">=</span>gpt2_variants[gpt2_variant].n_head)</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(res)</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>tokenizer.decode(logits.data.argmax(axis<span class="op">=-</span><span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[818, 257, 7604, 287, 262, 2323, 612, 5615, 257]
+Tensor[768](name="" op=Load):
+    v=array[768] f32 3Kb x∈[-50.634, 188.688] μ=0.388 σ=8.312
+    </code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/home/xl0/work/projects/grads/tidygrad/tidygrad/ops/activation.py:33: RuntimeWarning: underflow encountered in exp
+  self.set_out(1 / (1 + np.exp(-self.args[0].data)))
+/home/xl0/work/projects/grads/tidygrad/tidygrad/ops/activation.py:33: RuntimeWarning: overflow encountered in exp
+  self.set_out(1 / (1 + np.exp(-self.args[0].data)))</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>' man'</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>res.data.dtype</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>dtype('float32')</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># import gc</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co"># del logits, res</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="co"># gc.collect()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tqdm.auto <span class="im">import</span> tqdm</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>Tensor(np.random.randn(<span class="dv">5</span>,<span class="dv">5</span>)).data.dtype</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>dtype('float32')</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> np.random.randn(<span class="dv">5</span>, <span class="dv">5</span>).astype(np.float32)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> np.random.randn(<span class="dv">5</span>, <span class="dv">5</span>).astype(np.float32)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>(a<span class="op">+</span>b).dtype</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>dtype('float32')</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> np.zeros((<span class="dv">1000_000</span>, <span class="dv">1000</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(tokenizer.special_tokens_map)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">"&lt;|endoftext|&gt;"</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>tokens <span class="op">=</span> tokenizer.encode(text)  <span class="co"># returns a list of integers</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>{'bos_token': '&lt;|endoftext|&gt;', 'eos_token': '&lt;|endoftext|&gt;', 'unk_token': '&lt;|endoftext|&gt;'}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>[50256]</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>text <span class="op">=</span> <span class="st">"&lt;|endoftext|&gt; In a hole in the ground there lived a"</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="co"># text = "&lt;|endoftext|&gt;"</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>tokens <span class="op">=</span> tokenizer.encode(text)  <span class="co"># returns a list of integers</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"=== Generating ==="</span>)</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Input: "</span>, tokenizer.decode(tokens))</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> tidygrad.no_grad():</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> tqdm(<span class="bu">range</span>(<span class="dv">100</span>)):</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>        logits, res <span class="op">=</span> gpt2_language_model(model, tokens, n_layer<span class="op">=</span>gpt2_variants[gpt2_variant].n_layer, n_head<span class="op">=</span>gpt2_variants[gpt2_variant].n_head)</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>        tokens.append(logits.data.argmax(axis<span class="op">=-</span><span class="dv">1</span>))</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">del</span> logits, res</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># gc.collect()</span></span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"Output:"</span>, tokenizer.decode(tokens))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>=== Generating ===
+Input:  &lt;|endoftext|&gt; In a hole in the ground there lived a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet.
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage.
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage.
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage.
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage.
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage.
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Output: &lt;|endoftext|&gt; In a hole in the ground there lived a man who had been killed by a bullet. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of great courage and courage. He was a man of!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<script type="application/vnd.jupyter.widget-view+json">
+{"model_id":"2694c7ecb1f34aa9bd14de5a3a2e0bd2","version_major":2,"version_minor":0,"quarto_mimetype":"application/vnd.jupyter.widget-view+json"}
+</script>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/home/xl0/work/projects/grads/tidygrad/tidygrad/ops/common.py:263: RuntimeWarning: underflow encountered in exp
+  self.set_out(np.exp(self.args[0].data))
+/tmp/ipykernel_622983/3569323853.py:32: RuntimeWarning: underflow encountered in exp
+  ee = np.exp(attention) * mask
+/home/xl0/work/projects/grads/tidygrad/tidygrad/ops/common.py:263: RuntimeWarning: overflow encountered in exp
+  self.set_out(np.exp(self.args[0].data))
+/tmp/ipykernel_622983/3569323853.py:32: RuntimeWarning: overflow encountered in exp
+  ee = np.exp(attention) * mask
+/home/xl0/work/projects/grads/tidygrad/tidygrad/ops/common.py:185: RuntimeWarning: invalid value encountered in multiply
+  self.set_out(self.args[0].data * self.args[1].data)
+/home/xl0/work/projects/grads/tidygrad/tidygrad/ops/activation.py:33: RuntimeWarning: underflow encountered in divide
+  self.set_out(1 / (1 + np.exp(-self.args[0].data)))</code></pre>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script type="application/vnd.jupyter.widget-state+json">
+{"state":{},"version_major":2,"version_minor":0}
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/xl0/tidygrad/issues/new" class="toc-action">Report an issue</a></p></div></div></div></div></footer></body></html>
